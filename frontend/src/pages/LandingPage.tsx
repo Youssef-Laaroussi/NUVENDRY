@@ -5,13 +5,10 @@ import { DemandToCommerceJourney } from '../components/DemandToCommerceJourney';
 import { LifecycleSection } from '../components/LifecycleSection';
 import { WorkshopCard } from '../components/WorkshopCard';
 import { DemandIntelligencePreview } from '../components/DemandIntelligencePreview';
+import { RewardsShowcase } from '../components/RewardsShowcase';
 import { api } from '../api/client';
 import { Workshop, DemandCluster } from '../types';
-import { 
-  Sparkles, ArrowRight, ShieldCheck, Tag, Gift, Users, 
-  Award, TrendingUp, Layers, CheckCircle2, Bot, Calendar,
-  CreditCard, Share2, HelpCircle
-} from 'lucide-react';
+import { Sparkles, ArrowRight, ShieldCheck, Tag, CheckCircle2 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
@@ -257,54 +254,9 @@ export const LandingPage: React.FC = () => {
       <DemandIntelligencePreview clusters={clusters} />
 
       {/* ========================================================= */}
-      {/* 6. MERCHANT-FUNDED SIX REWARD MECHANISMS                  */}
+      {/* 6. SECTION 06 · SIX REAL REWARD MECHANISMS                */}
       {/* ========================================================= */}
-      <section className="py-14 bg-[#1B4D3E] text-white border-t border-forest/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Left Header */}
-            <div className="lg:col-span-4 space-y-2">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-mint/80 font-semibold block">
-                MERCHANT-FUNDED
-              </span>
-              <h3 className="text-2xl sm:text-3xl font-serif text-white tracking-tight">
-                Six Reward Mechanisms
-              </h3>
-              <p className="text-xs text-white/70 leading-relaxed">
-                Transparent, instructor-funded incentives to encourage early enrollment and community referrals.
-              </p>
-            </div>
-
-            {/* Right: 6 Horizontal Mechanism Icons */}
-            <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2 flex flex-col items-center justify-center">
-                <Tag className="w-5 h-5 text-mint" />
-                <span className="text-[11px] font-medium leading-tight">Welcome Discount</span>
-              </div>
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2 flex flex-col items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-mint" />
-                <span className="text-[11px] font-medium leading-tight">Early-Bird Discount</span>
-              </div>
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2 flex flex-col items-center justify-center">
-                <CreditCard className="w-5 h-5 text-mint" />
-                <span className="text-[11px] font-medium leading-tight">Store Credit</span>
-              </div>
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2 flex flex-col items-center justify-center">
-                <Gift className="w-5 h-5 text-mint" />
-                <span className="text-[11px] font-medium leading-tight">Digital Gifts</span>
-              </div>
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2 flex flex-col items-center justify-center">
-                <Share2 className="w-5 h-5 text-mint" />
-                <span className="text-[11px] font-medium leading-tight">Referral Rewards</span>
-              </div>
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2 flex flex-col items-center justify-center">
-                <Award className="w-5 h-5 text-gold" />
-                <span className="text-[11px] font-medium leading-tight">Achievement Badges</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <RewardsShowcase />
     </div>
   );
 };
