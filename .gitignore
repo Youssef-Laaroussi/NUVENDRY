@@ -11,6 +11,7 @@ env/
 .pytest_cache/
 .coverage
 htmlcov/
+*.log
 
 # Node & Frontend
 frontend/node_modules/
@@ -22,20 +23,33 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment & Secrets
+# Environment & Secrets (Crucial: Never commit actual keys/secrets)
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+id_rsa*
+id_ed25519*
+secrets.json
+credentials.json
 
-# Database & IDE
+# Database & Storage
 *.sqlite
 *.sqlite3
+*.db
 postgres_data/
+storage/
+uploads/
+
+# IDE & OS
 .idea/
 .vscode/
 *.swp
 *.swo
 .DS_Store
-
+Thumbs.db
