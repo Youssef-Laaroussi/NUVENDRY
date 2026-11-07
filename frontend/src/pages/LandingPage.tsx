@@ -6,6 +6,7 @@ import { LifecycleSection } from '../components/LifecycleSection';
 import { WorkshopCard } from '../components/WorkshopCard';
 import { DemandIntelligencePreview } from '../components/DemandIntelligencePreview';
 import { RewardsShowcase } from '../components/RewardsShowcase';
+import { InstructorStudioPreview } from '../components/InstructorStudioPreview';
 import { api } from '../api/client';
 import { Workshop, DemandCluster } from '../types';
 import { Sparkles, ArrowRight, ShieldCheck, Tag, CheckCircle2 } from 'lucide-react';
@@ -257,6 +258,11 @@ export const LandingPage: React.FC = () => {
       {/* 6. SECTION 06 · SIX REAL REWARD MECHANISMS                */}
       {/* ========================================================= */}
       <RewardsShowcase />
+
+      {/* ========================================================= */}
+      {/* 7. SECTION 07 · FINAL CTA + INSTRUCTOR DEMAND FEED        */}
+      {/* ========================================================= */}
+      <InstructorStudioPreview />
     </div>
   );
 };
