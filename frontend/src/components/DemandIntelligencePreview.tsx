@@ -1,174 +1,533 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  Layers, Sparkles, ArrowRight, ShieldCheck, CheckCircle2, 
-  Users, DollarSign, Clock, AlertCircle, Bot
+import { useNavigate } from 'react-router-dom';
+import {
+  Sparkles,
+  Layers,
+  CheckCircle2,
+  LayoutGrid,
+  FileText,
+  Target,
+  Compass,
+  Info,
+  Users,
+  Banknote,
+  BarChart2,
+  Flame,
+  ArrowRight,
+  Box,
+  Code2,
+  Coins,
+  FlaskConical,
+  Check,
 } from 'lucide-react';
 import { DemandCluster } from '../types';
+import demandHeaderLaptopImg from '../assets/demand-header-laptop.png';
+import demandOpportunityLaptopImg from '../assets/demand-opportunity-laptop.jpg';
+import workshopMlopsImg from '../assets/workshop-mlops.jpg';
+import workshopFullstackImg from '../assets/workshop-fullstack.jpg';
 
 interface Props {
-  clusters: DemandCluster[];
+  clusters?: DemandCluster[];
 }
 
-export const DemandIntelligencePreview: React.FC<Props> = ({ clusters }) => {
-  const [selectedClusterIndex, setSelectedClusterIndex] = useState(0);
+interface OpportunityItem {
+  id: string;
+  title: string;
+  requestsLabel: string;
+  budgetRange: string;
+  matchLabel: string;
+  demandScore: number;
+  iconBg: string;
+  iconColor: string;
+  iconType: 'layers' | 'box' | 'code';
+  thumbnail: string;
+  overviewSummary: string;
+  qualifiedLearners: number;
+  avgBudgetDollars: string;
+  deliveryModel: string;
+  validationNote: string;
+}
 
-  const displayClusters = clusters.length > 0 ? clusters : [
+const DEMAND_TOPICS = [
+  { label: 'AI Agents', count: 38, widthPct: 82, color: '#156847' },
+  { label: 'MLOps', count: 24, widthPct: 52, color: '#388E6C' },
+  { label: 'Full-Stack', count: 20, widthPct: 43, color: '#67B596' },
+  { label: 'Data Engineering', count: 16, widthPct: 35, color: '#A3D7C1' },
+  { label: 'Others', count: 9, widthPct: 19, color: '#CBE8DA' },
+];
+
+export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) => {
+  const navigate = useNavigate();
+  const [selectedIdx, setSelectedIdx] = useState(0);
+
+  const primaryCluster = clusters.length > 0 ? clusters[0] : null;
+
+  const opportunities: OpportunityItem[] = [
     {
-      id: 'mock-1',
-      name: 'Opportunity: Production LangGraph Agents & Memory Systems',
-      topic: 'LangGraph Agents',
-      summary: 'Aggregated 2 learner requests demanding hands-on implementation of LangGraph multi-agent supervisors with PostgreSQL checkpointers.',
-      member_count: 2,
-      avg_budget_cents: 4250,
-      currency: 'USD',
-      difficulty: 'intermediate',
-      status: 'offer_generated',
-      created_at: new Date().toISOString()
-    }
+      id: primaryCluster?.id || 'opp-langgraph',
+      title: 'Production LangGraph Agents & Memory Systems',
+      requestsLabel: `${primaryCluster?.member_count || 2} requests`,
+      budgetRange: '$35 – $50',
+      matchLabel: 'High match (0.91)',
+      demandScore: 91,
+      iconBg: 'bg-[#E8F6EE]',
+      iconColor: 'text-[#156847]',
+      iconType: 'layers',
+      thumbnail: demandOpportunityLaptopImg,
+      overviewSummary:
+        'High-intent demand for building production-grade LangGraph agents with persistent memory, tools, and deployment patterns.',
+      qualifiedLearners: primaryCluster?.member_count || 2,
+      avgBudgetDollars: primaryCluster
+        ? (primaryCluster.avg_budget_cents / 100).toFixed(2)
+        : '42.50',
+      deliveryModel: 'Intermediate Lab',
+      validationNote:
+        'The algorithm validates pairwise budget constraints and schedule compatibility (e.g., 2 learners, overlapping availability, target $35 – $50).',
+    },
+    {
+      id: 'opp-mlops',
+      title: 'MLOps for Real Projects',
+      requestsLabel: '16 requests',
+      budgetRange: '$50 – $90',
+      matchLabel: 'Match (0.87)',
+      demandScore: 87,
+      iconBg: 'bg-[#F3EEFF]',
+      iconColor: 'text-[#7C3AED]',
+      iconType: 'box',
+      thumbnail: workshopMlopsImg,
+      overviewSummary:
+        'Strong practitioner demand for end-to-end ML model serving, observability dashboards, drift detection, and automated retraining pipelines.',
+      qualifiedLearners: 16,
+      avgBudgetDollars: '64.00',
+      deliveryModel: 'Advanced Lab',
+      validationNote:
+        'The algorithm validates pairwise budget constraints and schedule compatibility (e.g., 16 learners, weekend cohort alignment, target $50 – $90).',
+    },
+    {
+      id: 'opp-react-paypal',
+      title: 'React + PayPal Workshops',
+      requestsLabel: '6 requests',
+      budgetRange: '$29 – $49',
+      matchLabel: 'Match (0.83)',
+      demandScore: 83,
+      iconBg: 'bg-[#EAF4FF]',
+      iconColor: 'text-[#2563EB]',
+      iconType: 'code',
+      thumbnail: workshopFullstackImg,
+      overviewSummary:
+        'Focused full-stack cohort seeking practical React + FastAPI integration with authoritative server-side pricing and PayPal Orders v2 checkout.',
+      qualifiedLearners: 6,
+      avgBudgetDollars: '36.00',
+      deliveryModel: 'Hands-on Lab',
+      validationNote:
+        'The algorithm validates pairwise budget constraints and schedule compatibility (e.g., 6 learners, English delivery, target $29 – $49).',
+    },
   ];
 
-  const activeCluster = displayClusters[selectedClusterIndex] || displayClusters[0];
+  const activeOpp = opportunities[selectedIdx] || opportunities[0];
+  const activeClusterCount = Math.max(clusters.length, 2);
+
+  const renderOppIcon = (item: OpportunityItem) => {
+    if (item.iconType === 'box') {
+      return <Box className="w-5 h-5 stroke-[1.9]" />;
+    }
+    if (item.iconType === 'code') {
+      return <Code2 className="w-5 h-5 stroke-[2]" />;
+    }
+    return <Layers className="w-5 h-5 stroke-[1.9]" />;
+  };
 
   return (
-    <section className="py-20 bg-ivory text-charcoal">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-          <div className="max-w-2xl space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-mint text-forest text-xs font-mono font-semibold uppercase tracking-wider">
-              <Bot className="w-3.5 h-3.5" />
-              <span>Real-Time Market Discovery</span>
+    <section className="relative py-16 md:py-20 bg-[#F8FAF8] text-[#111827] overflow-hidden border-t border-[#EBF0EC]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* ========================================================= */}
+        {/* BAND 1: Section Header + Right Laptop & Floating Pills    */}
+        {/* ========================================================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center mb-8">
+          {/* Left Title & Description */}
+          <div className="lg:col-span-7 space-y-3.5">
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#E5F3EB] text-[#14533C] text-xs font-semibold">
+              <Sparkles className="w-3.5 h-3.5 text-[#14533C] stroke-[2]" />
+              <span>AI Demand Intelligence</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-serif text-charcoal tracking-tight">
-              AI Demand Intelligence Preview
+
+            <h2 className="text-3xl sm:text-4xl lg:text-[46px] font-serif font-medium text-[#111827] tracking-tight leading-[1.12]">
+              AI Demand Intelligence{' '}
+              <span className="italic font-normal text-[#165C45]">Preview</span>
             </h2>
-            <p className="text-sm sm:text-base text-charcoal/70 leading-relaxed">
-              Inspect how fragmented learner prompts are parsed, validated against conflicting constraints, and organized into viable commercial opportunities.
+
+            <p className="text-sm sm:text-[15px] text-[#374151] max-w-2xl leading-[1.58]">
+              Parse fragmented learner prompts, validate constraints, and organize viable commercial
+              opportunities for instructors with clear demand, budget, and delivery signals.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              to="/demand"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-warmgray text-charcoal text-xs font-semibold hover:bg-ivory transition-colors shadow-xs"
+          {/* Right Laptop Cutout + Organic Mint Wave + 3 Floating Pills */}
+          <div className="lg:col-span-5 relative flex items-center justify-center lg:justify-end min-h-[175px]">
+            {/* Organic Two-Tone Mint Wave Backdrop */}
+            <svg
+              viewBox="0 0 460 210"
+              className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
             >
-              <Sparkles className="w-3.5 h-3.5 text-forest" />
-              <span>Submit Demand Request</span>
-            </Link>
-            <Link
-              to="/merchant/demand-intelligence"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-forest text-ivory text-xs font-semibold hover:bg-charcoal transition-colors shadow-xs"
-            >
-              <span>Explore Studio Table</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+              <path
+                d="M52 175 C28 130, 56 54, 136 36 C202 20, 258 42, 316 32 C382 20, 442 58, 444 122 C446 168, 408 192, 344 192 L96 192 C66 192, 60 186, 52 175 Z"
+                fill="#E3F4EB"
+                opacity="0.85"
+              />
+              <path
+                d="M92 178 C78 140, 108 74, 182 62 C246 52, 294 74, 348 66 C394 60, 424 92, 420 140 C417 174, 386 190, 332 190 L124 190 C102 190, 97 186, 92 178 Z"
+                fill="#D4EEE0"
+                opacity="0.55"
+              />
+            </svg>
+
+            <div className="relative z-10 flex items-center justify-center gap-1 sm:gap-2">
+              <img
+                src={demandHeaderLaptopImg}
+                alt="AI Demand Parsing Studio"
+                className="w-[215px] sm:w-[248px] h-auto object-contain select-none drop-shadow-[0_10px_18px_rgba(15,41,30,0.08)]"
+              />
+
+              {/* 3 Staggered Floating White Capability Pills */}
+              <div className="flex flex-col gap-2.5 -ml-3 sm:-ml-2">
+                <div className="ml-3 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E4EDE7] shadow-[0_4px_14px_rgba(15,41,30,0.07)] text-[12px] font-semibold text-[#1F2937] whitespace-nowrap">
+                  <Layers className="w-3.5 h-3.5 text-[#156847] stroke-[2] shrink-0" />
+                  <span>Parse Prompts</span>
+                </div>
+
+                <div className="-ml-1 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E4EDE7] shadow-[0_4px_14px_rgba(15,41,30,0.07)] text-[12px] font-semibold text-[#1F2937] whitespace-nowrap">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#156847] stroke-[2] shrink-0" />
+                  <span>Validate Constraints</span>
+                </div>
+
+                <div className="ml-1 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E4EDE7] shadow-[0_4px_14px_rgba(15,41,30,0.07)] text-[12px] font-semibold text-[#1F2937] whitespace-nowrap">
+                  <LayoutGrid className="w-3.5 h-3.5 text-[#156847] stroke-[2] shrink-0" />
+                  <span>Organize Opportunities</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Demand Intelligence Panel */}
-        <div className="bg-white rounded-2xl border border-warmgray p-6 sm:p-8 shadow-sm">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left: Cluster List Selector */}
-            <div className="lg:col-span-5 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-warmgray/60 text-xs text-charcoal/60">
-                <span className="font-mono uppercase text-[11px]">Identified Demand Opportunities</span>
-                <span className="font-mono">{displayClusters.length} Active Records</span>
+        {/* ========================================================= */}
+        {/* BAND 2: 4 KPI Summary Cards                               */}
+        {/* ========================================================= */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+          {/* KPI 1: Total Requests */}
+          <div className="bg-white rounded-2xl border border-[#E6EDE8] px-5 py-4 shadow-[0_4px_18px_rgba(15,41,30,0.04)] flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#EEF5FF] text-[#2563EB] flex items-center justify-center shrink-0">
+                <FileText className="w-5 h-5 stroke-[1.9]" />
               </div>
-
-              <div className="space-y-2">
-                {displayClusters.map((cluster, idx) => {
-                  const isSelected = selectedClusterIndex === idx;
-                  const avgPrice = (cluster.avg_budget_cents / 100).toFixed(2);
-                  return (
-                    <button
-                      key={cluster.id}
-                      onClick={() => setSelectedClusterIndex(idx)}
-                      className={`w-full text-left p-4 rounded-xl border transition-all ${
-                        isSelected
-                          ? 'bg-mint/40 border-forest shadow-xs'
-                          : 'bg-ivory/50 border-warmgray hover:border-charcoal/30 hover:bg-ivory'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <span className="font-semibold text-xs text-charcoal line-clamp-1">
-                          {cluster.name}
-                        </span>
-                        <span className="font-mono text-xs font-bold text-forest shrink-0">
-                          ${avgPrice}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-charcoal/60 line-clamp-2 leading-relaxed mb-2">
-                        {cluster.summary}
-                      </p>
-                      <div className="flex items-center gap-3 text-[10px] font-mono text-charcoal/50">
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3 h-3 text-forest" /> {cluster.member_count} Learners
-                        </span>
-                        <span>•</span>
-                        <span className="capitalize">{cluster.difficulty}</span>
-                      </div>
-                    </button>
-                  );
-                })}
+              <div>
+                <div className="flex items-center gap-1 text-[12.5px] font-medium text-[#374151]">
+                  <span>Total Requests</span>
+                  <Info className="w-3.5 h-3.5 text-[#9CA3AF]" />
+                </div>
+                <div className="text-[28px] leading-tight font-extrabold text-[#111827] tracking-tight mt-0.5">
+                  42
+                </div>
               </div>
             </div>
 
-            {/* Right: Selected Cluster Inspector */}
-            <div className="lg:col-span-7 bg-ivory/80 rounded-xl border border-warmgray p-6 space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-warmgray gap-2">
-                <div>
-                  <span className="text-[10px] font-mono uppercase text-forest font-semibold">
+            <div className="flex flex-col items-end shrink-0">
+              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-[#E6F4EC] text-[#156947] text-[11px] font-bold">
+                ↑ +16%
+              </span>
+              <span className="text-[10.5px] text-[#6B7280] mt-1">vs. prior 14 days</span>
+            </div>
+          </div>
+
+          {/* KPI 2: Active Clusters */}
+          <div className="bg-white rounded-2xl border border-[#E6EDE8] px-5 py-4 shadow-[0_4px_18px_rgba(15,41,30,0.04)] flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#FEF7E6] text-[#D99B26] flex items-center justify-center shrink-0">
+                <Layers className="w-5 h-5 stroke-[1.9]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1 text-[12.5px] font-medium text-[#374151]">
+                  <span>Active Clusters</span>
+                  <Info className="w-3.5 h-3.5 text-[#9CA3AF]" />
+                </div>
+                <div className="text-[28px] leading-tight font-extrabold text-[#111827] tracking-tight mt-0.5">
+                  {activeClusterCount}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end shrink-0">
+              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-[#E6F4EC] text-[#156947] text-[11px] font-bold">
+                ↑ +100%
+              </span>
+              <span className="text-[10.5px] text-[#6B7280] mt-1">vs. prior 14 days</span>
+            </div>
+          </div>
+
+          {/* KPI 3: Opportunities */}
+          <div className="bg-white rounded-2xl border border-[#E6EDE8] px-5 py-4 shadow-[0_4px_18px_rgba(15,41,30,0.04)] flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#FFF1E6] text-[#EA7A24] flex items-center justify-center shrink-0">
+                <Target className="w-5 h-5 stroke-[1.9]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1 text-[12.5px] font-medium text-[#374151]">
+                  <span>Opportunities</span>
+                  <Info className="w-3.5 h-3.5 text-[#9CA3AF]" />
+                </div>
+                <div className="text-[28px] leading-tight font-extrabold text-[#111827] tracking-tight mt-0.5">
+                  5
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end shrink-0">
+              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-[#E6F4EC] text-[#156947] text-[11px] font-bold">
+                ↑ +25%
+              </span>
+              <span className="text-[10.5px] text-[#6B7280] mt-1">vs. prior 14 days</span>
+            </div>
+          </div>
+
+          {/* KPI 4: Conversion Rate */}
+          <div className="bg-white rounded-2xl border border-[#E6EDE8] px-5 py-4 shadow-[0_4px_18px_rgba(15,41,30,0.04)] flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#E8F6EE] text-[#16794F] flex items-center justify-center shrink-0">
+                <Compass className="w-5 h-5 stroke-[1.9]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1 text-[12.5px] font-medium text-[#374151]">
+                  <span>Conversion Rate</span>
+                  <Info className="w-3.5 h-3.5 text-[#9CA3AF]" />
+                </div>
+                <div className="text-[28px] leading-tight font-extrabold text-[#111827] tracking-tight mt-0.5">
+                  34%
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end shrink-0">
+              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-[#E6F4EC] text-[#156947] text-[11px] font-bold">
+                ↑ +9 pp
+              </span>
+              <span className="text-[10.5px] text-[#6B7280] mt-1">vs. prior 14 days</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* BAND 3: Demand Topics Chart + Top Opportunities List      */}
+        {/* ========================================================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-[46fr_54fr] gap-5 mb-5 items-stretch">
+          {/* Left Card: Demand Topics (Last 14 Days) */}
+          <div className="bg-white rounded-2xl border border-[#E6EDE8] p-6 shadow-[0_4px_20px_rgba(15,41,30,0.04)] flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2 mb-6">
+              <h3 className="font-bold text-[16px] text-[#111827]">
+                Demand Topics (Last 14 Days)
+              </h3>
+              <span className="text-[12px] font-medium text-[#4B5563]">Total Requests: 42</span>
+            </div>
+
+            <div className="space-y-4 my-auto">
+              {DEMAND_TOPICS.map((topic) => (
+                <div key={topic.label} className="flex items-center gap-3.5">
+                  <span className="w-[106px] text-right text-[12.5px] font-medium text-[#1F2937] shrink-0">
+                    {topic.label}
+                  </span>
+
+                  <div className="flex-1 flex items-center gap-2.5 min-w-0">
+                    <div
+                      className="h-[18px] rounded-[5px] transition-all duration-500"
+                      style={{
+                        width: `${topic.widthPct}%`,
+                        backgroundColor: topic.color,
+                      }}
+                    />
+                    <span className="text-[13px] font-bold text-[#111827] shrink-0">
+                      {topic.count}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Card: Top Opportunities */}
+          <div className="bg-white rounded-2xl border border-[#E6EDE8] p-6 shadow-[0_4px_20px_rgba(15,41,30,0.04)] flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <h3 className="font-bold text-[16px] text-[#111827]">Top Opportunities</h3>
+              <span className="inline-flex items-center gap-1 text-[12px] text-[#4B5563]">
+                <span>Sorted by demand score</span>
+                <Info className="w-3.5 h-3.5 text-[#6B7280]" />
+              </span>
+            </div>
+
+            <div className="space-y-2.5">
+              {opportunities.map((opp, idx) => {
+                const isSelected = selectedIdx === idx;
+                return (
+                  <div
+                    key={opp.id}
+                    onClick={() => setSelectedIdx(idx)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedIdx(idx);
+                      }
+                    }}
+                    className={`rounded-xl px-3.5 py-3 border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                      isSelected
+                        ? 'bg-[#F8FBF9] border-[#DCECE3] shadow-[0_2px_10px_rgba(15,41,30,0.03)]'
+                        : 'bg-white border-[#EEF2EF] hover:border-[#DCE8E1] hover:bg-[#FAFDFB]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`w-10 h-10 rounded-xl ${opp.iconBg} ${opp.iconColor} flex items-center justify-center shrink-0`}
+                      >
+                        {renderOppIcon(opp)}
+                      </div>
+
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-[13.5px] sm:text-[14px] text-[#111827] truncate">
+                          {opp.title}
+                        </h4>
+
+                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11.5px] text-[#4B5563] mt-0.5">
+                          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                            <Users className="w-3.5 h-3.5 text-[#6B7280]" />
+                            <span>{opp.requestsLabel}</span>
+                          </span>
+                          <span className="text-[#D1D5DB]">|</span>
+                          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                            <Banknote className="w-3.5 h-3.5 text-[#6B7280]" />
+                            <span>{opp.budgetRange}</span>
+                          </span>
+                          <span className="text-[#D1D5DB]">|</span>
+                          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                            <BarChart2 className="w-3.5 h-3.5 text-[#6B7280]" />
+                            <span>{opp.matchLabel}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E6F4EC] text-[#14533C] text-[11.5px] font-semibold whitespace-nowrap">
+                        <Flame className="w-3.5 h-3.5 text-[#1F8A5B] fill-[#1F8A5B]" />
+                        <span>Demand {opp.demandScore}</span>
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/demand');
+                        }}
+                        className="px-3.5 py-1.5 rounded-lg bg-[#135A3E] hover:bg-[#0D432E] text-white text-[12px] font-semibold inline-flex items-center gap-1.5 transition-colors shadow-2xs whitespace-nowrap"
+                      >
+                        <span>View</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* BAND 4: Bottom Synthesized Opportunity Overview Card      */}
+        {/* ========================================================= */}
+        <div className="bg-white rounded-2xl border border-[#E6EDE8] p-5 sm:p-6 shadow-[0_6px_26px_rgba(15,41,30,0.05)]">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-6">
+            {/* Left Rounded Thumbnail */}
+            <div className="w-full lg:w-[208px] h-[142px] rounded-xl overflow-hidden shrink-0 bg-[#111827] shadow-2xs">
+              <img
+                src={activeOpp.thumbnail}
+                alt={activeOpp.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            {/* Right Synthesized Details + Validation Banner */}
+            <div className="flex-1 min-w-0 flex flex-col justify-between gap-3.5">
+              {/* Top Row: Overview Text + 3 Metric Columns */}
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-5">
+                <div className="xl:max-w-[49%] space-y-1">
+                  <span className="text-[12px] font-bold text-[#155E44] block">
                     Synthesized Opportunity Overview
                   </span>
-                  <h3 className="font-serif text-lg sm:text-xl font-medium text-charcoal mt-0.5">
-                    {activeCluster.name}
+                  <h3 className="font-serif font-bold text-[20px] sm:text-[22px] text-[#111827] leading-[1.2] tracking-tight">
+                    {activeOpp.title}
                   </h3>
-                </div>
-                <div className="shrink-0">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-forest text-ivory text-[10px] font-mono font-semibold uppercase">
-                    <CheckCircle2 className="w-3 h-3 text-mint" />
-                    <span>Validated Cluster</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <span className="text-[11px] font-mono uppercase text-charcoal/50 block">Opportunity Summary</span>
-                <p className="text-xs sm:text-sm text-charcoal/80 leading-relaxed bg-white p-3.5 rounded-lg border border-warmgray/60">
-                  {activeCluster.summary}
-                </p>
-              </div>
-
-              {/* Constraint Details Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 bg-white rounded-lg border border-warmgray/60 space-y-0.5">
-                  <span className="text-[10px] font-mono text-charcoal/50 uppercase block">Cohort Size</span>
-                  <div className="font-bold text-charcoal text-sm">{activeCluster.member_count} Qualified Learners</div>
-                  <span className="text-[10px] text-charcoal/50">Willing to enroll</span>
+                  <p className="text-[12.5px] text-[#4B5563] leading-[1.5]">
+                    {activeOpp.overviewSummary}
+                  </p>
                 </div>
 
-                <div className="p-3 bg-white rounded-lg border border-warmgray/60 space-y-0.5">
-                  <span className="text-[10px] font-mono text-charcoal/50 uppercase block">Avg Budget Target</span>
-                  <div className="font-bold text-forest font-mono text-sm">
-                    ${(activeCluster.avg_budget_cents / 100).toFixed(2)} USD
+                {/* 3 Right Metric Columns with Dividers */}
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-5 sm:gap-6 shrink-0">
+                  <div className="hidden xl:block h-12 w-px bg-[#E5ECE7]" />
+
+                  {/* Qualified Learners */}
+                  <div className="flex items-start gap-2.5">
+                    <Users className="w-5 h-5 text-[#166547] stroke-[1.8] shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-[11.5px] text-[#4B5563] block whitespace-nowrap">
+                        Qualified Learners
+                      </span>
+                      <span className="text-[20px] font-extrabold text-[#111827] leading-tight block mt-0.5">
+                        {activeOpp.qualifiedLearners}
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-[10px] text-charcoal/50">Derived from prompts</span>
-                </div>
 
-                <div className="p-3 bg-white rounded-lg border border-warmgray/60 space-y-0.5 col-span-2 sm:col-span-1">
-                  <span className="text-[10px] font-mono text-charcoal/50 uppercase block">Delivery Model</span>
-                  <div className="font-bold text-charcoal text-sm capitalize">{activeCluster.difficulty} Lab</div>
-                  <span className="text-[10px] text-charcoal/50">Interactive live format</span>
+                  <div className="hidden sm:block h-11 w-px bg-[#E5ECE7]" />
+
+                  {/* Avg. Budget Target */}
+                  <div className="flex items-start gap-2.5">
+                    <Coins className="w-5 h-5 text-[#166547] stroke-[1.8] shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-[11.5px] text-[#4B5563] block whitespace-nowrap">
+                        Avg. Budget Target
+                      </span>
+                      <div className="leading-tight mt-0.5 whitespace-nowrap">
+                        <span className="text-[20px] font-extrabold text-[#111827]">
+                          ${activeOpp.avgBudgetDollars}
+                        </span>{' '}
+                        <span className="text-[12px] font-medium text-[#374151]">USD</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="hidden sm:block h-11 w-px bg-[#E5ECE7]" />
+
+                  {/* Delivery Model */}
+                  <div className="flex items-start gap-2.5">
+                    <FlaskConical className="w-5 h-5 text-[#166547] stroke-[1.8] shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-[11.5px] text-[#4B5563] block whitespace-nowrap">
+                        Delivery Model
+                      </span>
+                      <span className="text-[17px] font-extrabold text-[#111827] leading-tight block mt-0.5 whitespace-nowrap">
+                        {activeOpp.deliveryModel}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Algorithmic Integrity Callout */}
-              <div className="p-3.5 rounded-lg bg-mint/50 border border-forest/20 flex items-start gap-2.5 text-xs text-charcoal/80">
-                <ShieldCheck className="w-4 h-4 text-forest shrink-0 mt-0.5" />
-                <p className="text-[11px] leading-relaxed">
-                  <strong>Constraint Integrity:</strong> The algorithm validates pairwise budget constraints and schedule compatibility to avoid aggregating members with conflicting requirements.
-                </p>
+              {/* Bottom Algorithmic Validation Callout Bar */}
+              <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-lg bg-[#E6F4EC] text-[#134E3A] text-[12px] font-medium">
+                <span className="w-4 h-4 rounded-full bg-[#18794E] text-white flex items-center justify-center shrink-0">
+                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                </span>
+                <span>{activeOpp.validationNote}</span>
               </div>
             </div>
           </div>
@@ -179,4 +538,3 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters }) => {
 };
 
 export default DemandIntelligencePreview;
-

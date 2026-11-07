@@ -4,6 +4,7 @@ import { HeroVisualization } from '../components/HeroVisualization';
 import { DemandToCommerceJourney } from '../components/DemandToCommerceJourney';
 import { LifecycleSection } from '../components/LifecycleSection';
 import { WorkshopCard } from '../components/WorkshopCard';
+import { DemandIntelligencePreview } from '../components/DemandIntelligencePreview';
 import { api } from '../api/client';
 import { Workshop, DemandCluster } from '../types';
 import { 
@@ -251,7 +252,12 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ========================================================= */}
-      {/* 5. MERCHANT-FUNDED SIX REWARD MECHANISMS                  */}
+      {/* 5. SECTION 05 · AI DEMAND INTELLIGENCE PREVIEW            */}
+      {/* ========================================================= */}
+      <DemandIntelligencePreview clusters={clusters} />
+
+      {/* ========================================================= */}
+      {/* 6. MERCHANT-FUNDED SIX REWARD MECHANISMS                  */}
       {/* ========================================================= */}
       <section className="py-14 bg-[#1B4D3E] text-white border-t border-forest/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
