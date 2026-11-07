@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HeroVisualization } from '../components/HeroVisualization';
+import { DemandToCommerceJourney } from '../components/DemandToCommerceJourney';
 import { LifecycleSection } from '../components/LifecycleSection';
 import { WorkshopCard } from '../components/WorkshopCard';
 import { api } from '../api/client';
@@ -104,65 +105,9 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ========================================================= */}
-      {/* 2. FOUR FEATURE VALUE CARDS                               */}
+      {/* 2. AFTER HERO · CORE DIFFERENTIATION                      */}
       {/* ========================================================= */}
-      <section className="py-12 bg-white border-y border-warmgray">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Card 1 */}
-            <div className="bg-ivory/50 rounded-2xl border border-warmgray p-6 space-y-3 hover:border-forest/40 transition-colors shadow-2xs">
-              <div className="w-10 h-10 rounded-xl bg-mint text-forest flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-forest" />
-              </div>
-              <h3 className="font-semibold text-sm sm:text-base text-charcoal">
-                AI Demand Intelligence
-              </h3>
-              <p className="text-xs text-charcoal/70 leading-relaxed">
-                Understand learner requests, extract constraints, and detect real opportunities.
-              </p>
-            </div>
-
-            {/* Card 2 */}
-            <div className="bg-ivory/50 rounded-2xl border border-warmgray p-6 space-y-3 hover:border-forest/40 transition-colors shadow-2xs">
-              <div className="w-10 h-10 rounded-xl bg-mint text-forest flex items-center justify-center">
-                <Layers className="w-5 h-5 text-forest" />
-              </div>
-              <h3 className="font-semibold text-sm sm:text-base text-charcoal">
-                Demand-to-Offer Creation
-              </h3>
-              <p className="text-xs text-charcoal/70 leading-relaxed">
-                Turn grouped demand into high-potential workshop proposals for instructors.
-              </p>
-            </div>
-
-            {/* Card 3 */}
-            <div className="bg-ivory/50 rounded-2xl border border-warmgray p-6 space-y-3 hover:border-forest/40 transition-colors shadow-2xs">
-              <div className="w-10 h-10 rounded-xl bg-mint text-forest flex items-center justify-center">
-                <ShieldCheck className="w-5 h-5 text-forest" />
-              </div>
-              <h3 className="font-semibold text-sm sm:text-base text-charcoal">
-                Verified PayPal Reservations
-              </h3>
-              <p className="text-xs text-charcoal/70 leading-relaxed">
-                Secure checkout with PayPal Sandbox and automatic seat confirmation.
-              </p>
-            </div>
-
-            {/* Card 4 */}
-            <div className="bg-ivory/50 rounded-2xl border border-warmgray p-6 space-y-3 hover:border-forest/40 transition-colors shadow-2xs">
-              <div className="w-10 h-10 rounded-xl bg-mint text-forest flex items-center justify-center">
-                <Gift className="w-5 h-5 text-forest" />
-              </div>
-              <h3 className="font-semibold text-sm sm:text-base text-charcoal">
-                Merchant-Funded Rewards
-              </h3>
-              <p className="text-xs text-charcoal/70 leading-relaxed">
-                Welcome discounts, early-bird offers, store credit, digital gifts, referrals, and achievement badges.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <DemandToCommerceJourney clusters={clusters} workshops={workshops} />
 
       {/* ========================================================= */}
       {/* 3. THE LIFECYCLE — HOW NUVENDRY WORKS                     */}
