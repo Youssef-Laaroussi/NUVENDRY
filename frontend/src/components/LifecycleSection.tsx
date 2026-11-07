@@ -4,17 +4,24 @@ import { PayPalOfficialLogo } from './HeroVisualization';
 import step1Img from '../assets/step1-learner.png';
 import step3Img from '../assets/step3-instructor.png';
 
-/* --- Organic Mint Wave Shape behind Step elements --- */
+/* --- Exact Organic Mint Wave Cloud Backdrop matching reference design --- */
 const OrganicWaveBackdrop: React.FC<{ className?: string }> = ({ className = "" }) => (
   <svg 
-    viewBox="0 0 220 180" 
+    viewBox="0 0 240 180" 
     className={`absolute inset-0 w-full h-full pointer-events-none -z-10 ${className}`} 
     fill="none" 
     xmlns="http://www.w3.org/2000/svg"
   >
+    {/* Outer soft ambient mint wave */}
     <path 
-      d="M 40,90 C 25,50 60,20 110,18 C 160,16 195,45 198,85 C 202,125 170,158 120,162 C 65,166 45,130 40,90 Z" 
-      fill="#E2F4EA" 
+      d="M 38,95 C 18,50 62,18 118,16 C 172,14 212,42 216,88 C 220,132 182,166 128,168 C 68,170 44,132 38,95 Z" 
+      fill="#E5F6EE" 
+      opacity="0.85"
+    />
+    {/* Inner fluid wave contour */}
+    <path 
+      d="M 52,90 C 35,58 72,30 120,28 C 165,26 200,50 202,86 C 205,124 172,154 126,155 C 75,156 56,120 52,90 Z" 
+      fill="#DAF0E4" 
     />
   </svg>
 );
@@ -158,9 +165,8 @@ export const LifecycleSection: React.FC = () => {
               </span>
             </div>
 
-            {/* 3D Illustration with surrounding organic wave */}
+            {/* 3D Illustration with surrounding organic wave (dark circle & arrows 100% removed) */}
             <div className="relative mb-4 h-44 w-full flex items-center justify-center overflow-visible">
-              <OrganicWaveBackdrop />
               <img 
                 src={step1Img} 
                 alt="Learner stating demand" 
@@ -225,7 +231,6 @@ export const LifecycleSection: React.FC = () => {
 
             {/* 3D Illustration: Male Instructor with Glasses and Checklist surrounded by organic wave */}
             <div className="relative mb-4 h-44 w-full flex items-center justify-center overflow-visible">
-              <OrganicWaveBackdrop />
               <img 
                 src={step3Img} 
                 alt="Male Instructor publishing workshop" 
