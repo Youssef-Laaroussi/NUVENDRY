@@ -196,16 +196,16 @@ async def seed():
             id=ws1_id,
             merchant_id=merchant_profile_id,
             offer_id=offer_id,
-            title="Building Production-Ready LangGraph Agents with Resilient State",
-            description="A comprehensive hands-on live workshop where you will code a production multi-agent system using LangGraph, PostgreSQL checkpointers, and resilient error recovery patterns.",
+            title="Building Production-Ready LangGraph Agents",
+            description="Design, build, and deploy multi-step AI agents with LangGraph, tool use, memory, and real-world production patterns.",
             category="LangGraph Agents",
-            difficulty="intermediate",
+            difficulty="Intermediate",
             duration_hours=2,
             price_cents=3900,
             currency="USD",
             total_seats=25,
             remaining_seats=23,
-            scheduled_at=now + timedelta(days=5, hours=3),
+            scheduled_at=now + timedelta(days=4, hours=3),
             is_published=True
         )
         
@@ -215,15 +215,15 @@ async def seed():
             merchant_id=merchant_profile_id,
             offer_id=None,
             title="Production MLOps: Serving, Monitoring & Automated Retraining",
-            description="Step-by-step masterclass on deploying high-throughput models with FastAPI, MLflow registry, Prometheus metrics, and automated canary deployment gates.",
+            description="Deploy, monitor, and automatically retrain ML models in production with FastAPI, observability, and data pipelines.",
             category="MLOps",
-            difficulty="advanced",
+            difficulty="Advanced",
             duration_hours=3,
             price_cents=5500,
             currency="USD",
             total_seats=20,
             remaining_seats=18,
-            scheduled_at=now + timedelta(days=12, hours=4),
+            scheduled_at=now + timedelta(days=11, hours=4),
             is_published=True
         )
         
@@ -233,15 +233,15 @@ async def seed():
             merchant_id=merchant_profile_id,
             offer_id=None,
             title="Full-Stack AI Apps with React, FastAPI & PayPal Checkout",
-            description="Build modern AI applications integrating modern React frontend, async FastAPI backend, and verified PayPal Orders v2 sandbox checkout.",
+            description="Build a complete AI web app with React, FastAPI, and a secure PayPal Sandbox checkout, from end to end.",
             category="React + FastAPI",
-            difficulty="beginner",
+            difficulty="Beginner-Intermediate",
             duration_hours=2,
             price_cents=2900,
             currency="USD",
             total_seats=30,
             remaining_seats=29,
-            scheduled_at=now + timedelta(days=8, hours=2),
+            scheduled_at=now + timedelta(days=7, hours=2),
             is_published=True
         )
         db.add_all([ws1, ws2, ws3])
