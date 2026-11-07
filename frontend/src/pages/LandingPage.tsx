@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HeroVisualization } from '../components/HeroVisualization';
+import { LifecycleSection } from '../components/LifecycleSection';
 import { WorkshopCard } from '../components/WorkshopCard';
 import { api } from '../api/client';
 import { Workshop, DemandCluster } from '../types';
@@ -166,102 +167,7 @@ export const LandingPage: React.FC = () => {
       {/* ========================================================= */}
       {/* 3. THE LIFECYCLE — HOW NUVENDRY WORKS                     */}
       {/* ========================================================= */}
-      <section className="py-20 bg-ivory">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-xl mx-auto mb-16 space-y-2">
-            <span className="text-[11px] font-mono uppercase tracking-widest text-forest font-semibold">
-              THE LIFECYCLE
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-serif text-charcoal tracking-tight">
-              How NUVENDRY Works
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 lg:gap-8 relative">
-            {/* Step 1 */}
-            <div className="bg-white rounded-2xl border border-warmgray p-6 space-y-4 shadow-xs relative flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="w-8 h-8 rounded-full bg-[#205C49] text-white flex items-center justify-center font-bold text-xs">
-                  1
-                </div>
-                {/* Visual Avatar Mockup */}
-                <div className="h-24 rounded-xl bg-mint/50 border border-forest/15 flex items-center justify-center">
-                  <img
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80"
-                    alt="Learner"
-                    className="w-14 h-14 rounded-full object-cover border-2 border-forest/30"
-                  />
-                </div>
-                <h3 className="font-semibold text-base text-charcoal">Express Your Need</h3>
-                <p className="text-xs text-charcoal/70 leading-relaxed">
-                  Learners describe what they want to learn, with topic, budget, language, and schedule.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="bg-white rounded-2xl border border-warmgray p-6 space-y-4 shadow-xs relative flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="w-8 h-8 rounded-full bg-[#205C49] text-white flex items-center justify-center font-bold text-xs">
-                  2
-                </div>
-                {/* Visual AI Chip */}
-                <div className="h-24 rounded-xl bg-mint/50 border border-forest/15 flex items-center justify-center">
-                  <div className="w-14 h-14 rounded-xl bg-white border border-forest/30 flex items-center justify-center shadow-xs">
-                    <span className="font-mono font-bold text-forest text-sm">[ AI ]</span>
-                  </div>
-                </div>
-                <h3 className="font-semibold text-base text-charcoal">AI Clusters Demand</h3>
-                <p className="text-xs text-charcoal/70 leading-relaxed">
-                  Our AI groups similar requests, validates constraints, and identifies commercial opportunities.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="bg-white rounded-2xl border border-warmgray p-6 space-y-4 shadow-xs relative flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="w-8 h-8 rounded-full bg-[#205C49] text-white flex items-center justify-center font-bold text-xs">
-                  3
-                </div>
-                {/* Visual Instructor Mockup */}
-                <div className="h-24 rounded-xl bg-mint/50 border border-forest/15 flex items-center justify-center">
-                  <img
-                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&h=120&q=80"
-                    alt="Instructor"
-                    className="w-14 h-14 rounded-full object-cover border-2 border-forest/30"
-                  />
-                </div>
-                <h3 className="font-semibold text-base text-charcoal">Instructor Publishes</h3>
-                <p className="text-xs text-charcoal/70 leading-relaxed">
-                  Instructors review an AI-generated offer, adjust content, set price and capacity, then publish.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 4 */}
-            <div className="bg-white rounded-2xl border border-warmgray p-6 space-y-4 shadow-xs relative flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="w-8 h-8 rounded-full bg-[#205C49] text-white flex items-center justify-center font-bold text-xs">
-                  4
-                </div>
-                {/* Visual PayPal Badge */}
-                <div className="h-24 rounded-xl bg-mint/50 border border-forest/15 flex items-center justify-center">
-                  <div className="px-4 py-2 bg-white rounded-xl border border-warmgray shadow-xs">
-                    <span className="font-serif italic font-bold text-lg text-[#003087]">
-                      Pay<span className="text-[#0079C1]">Pal</span>
-                    </span>
-                  </div>
-                </div>
-                <h3 className="font-semibold text-base text-charcoal">Book with PayPal</h3>
-                <p className="text-xs text-charcoal/70 leading-relaxed">
-                  Learners reserve their seat, apply eligible rewards, and checkout via PayPal Sandbox.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <LifecycleSection />
 
       {/* ========================================================= */}
       {/* 4. FEATURED WORKSHOPS MARKETPLACE                         */}
