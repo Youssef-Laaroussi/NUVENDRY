@@ -387,3 +387,4 @@ export const LifecycleSection: React.FC = () => {
 };
 
 export default LifecycleSection;
+
