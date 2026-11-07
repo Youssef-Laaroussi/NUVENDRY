@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nuvendry-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nuvendry
+      POSTGRES_PASSWORD: nuvendry_secret_password_2026
+      POSTGRES_DB: nuvendry
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nuvendry -d nuvendry"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nuvendry-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://nuvendry:nuvendry_secret_password_2026@postgres:5432/nuvendry
+      - SECRET_KEY=nuvendry_production_grade_secret_key_change_in_prod_2026
+      - PAYPAL_ENV=sandbox
+      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID:-}
+      - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET:-}
+      - PAYPAL_WEBHOOK_ID=${PAYPAL_WEBHOOK_ID:-}
+      - DEMO_MODE=true
+    command: >
+      sh -c "python seed_demo.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nuvendry-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  postgres_data:
+

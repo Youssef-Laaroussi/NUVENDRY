@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #F7F7F2;
+    color: #1C2925;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  
+  h1, h2, .font-serif {
+    font-family: 'Newsreader', Georgia, serif;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F7F7F2;
+}
+::-webkit-scrollbar-thumb {
+  background: #6D9B83;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #205C49;
+}
+
