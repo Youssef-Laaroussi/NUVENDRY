@@ -53,3 +53,9 @@ uploads/
 *.swo
 .DS_Store
 Thumbs.db
+
+# Documentation & Internal Reports (Kept strictly local)
+docs/
+DELIVERY_REPORT.md
+*README*.md
+!/README.md
