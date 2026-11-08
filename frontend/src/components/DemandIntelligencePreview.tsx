@@ -138,7 +138,11 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
   };
 
   return (
-    <section className="relative py-16 md:py-20 bg-[#F8FAF8] text-[#111827] overflow-hidden border-t border-[#EBF0EC]">
+    <section
+      id="ai-demand"
+      tabIndex={-1}
+      className="relative py-16 md:py-20 bg-[#F8FAF8] text-[#111827] overflow-hidden border-t border-[#EBF0EC] scroll-mt-20 focus:outline-hidden"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* ========================================================= */}
         {/* BAND 1: Section Header + Right Laptop & Floating Pills    */}

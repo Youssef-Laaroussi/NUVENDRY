@@ -14,9 +14,6 @@ import { LandingPage } from './pages/LandingPage';
 import { WorkshopsMarketplace } from './pages/WorkshopsMarketplace';
 import { WorkshopDetail } from './pages/WorkshopDetail';
 import { DemandIntroPage } from './pages/DemandIntroPage';
-import { HowItWorksPage } from './pages/HowItWorksPage';
-import { RewardsPage } from './pages/RewardsPage';
-import { ForInstructorsPage } from './pages/ForInstructorsPage';
 import { SignInPage } from './pages/SignInPage';
 import { SignUpPage } from './pages/SignUpPage';
 import { PrivacyPage } from './pages/PrivacyPage';
@@ -58,9 +55,18 @@ export const App: React.FC = () => {
             <Route path="/workshops" element={<WorkshopsMarketplace />} />
             <Route path="/workshops/:id" element={<WorkshopDetail />} />
             <Route path="/demand" element={<DemandIntroPage />} />
-            <Route path="/how-it-works" element={<HowItWorksPage />} />
-            <Route path="/rewards" element={<RewardsPage />} />
-            <Route path="/for-instructors" element={<ForInstructorsPage />} />
+            <Route
+              path="/how-it-works"
+              element={<Navigate to={{ pathname: '/', hash: '#how-it-works' }} replace />}
+            />
+            <Route
+              path="/rewards"
+              element={<Navigate to={{ pathname: '/', hash: '#rewards' }} replace />}
+            />
+            <Route
+              path="/for-instructors"
+              element={<Navigate to={{ pathname: '/', hash: '#for-instructors' }} replace />}
+            />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
           </Route>

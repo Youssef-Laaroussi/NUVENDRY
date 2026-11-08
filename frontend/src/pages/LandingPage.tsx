@@ -7,6 +7,7 @@ import { WorkshopCard } from '../components/WorkshopCard';
 import { DemandIntelligencePreview } from '../components/DemandIntelligencePreview';
 import { RewardsShowcase } from '../components/RewardsShowcase';
 import { InstructorStudioPreview } from '../components/InstructorStudioPreview';
+import { FinalCtaSection } from '../components/FinalCtaSection';
 import { api } from '../api/client';
 import { Workshop, DemandCluster } from '../types';
 import { Sparkles, ArrowRight, ShieldCheck, Tag, CheckCircle2 } from 'lucide-react';
@@ -39,7 +40,11 @@ export const LandingPage: React.FC = () => {
       {/* ========================================================= */}
       {/* 1. HERO SECTION                                           */}
       {/* ========================================================= */}
-      <section className="relative pt-8 pb-14 md:pt-12 md:pb-20 bg-white overflow-hidden">
+      <section
+        id="hero"
+        tabIndex={-1}
+        className="relative pt-8 pb-14 md:pt-12 md:pb-20 bg-white overflow-hidden scroll-mt-20 focus:outline-hidden"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
             {/* Left Column: Hero Value Proposition */}
@@ -116,7 +121,11 @@ export const LandingPage: React.FC = () => {
       {/* ========================================================= */}
       {/* 4. SECTION 04 · FEATURED INTERACTIVE WORKSHOPS            */}
       {/* ========================================================= */}
-      <section className="relative py-16 md:py-20 bg-[#F8FAF8] overflow-hidden">
+      <section
+        id="featured-workshops"
+        tabIndex={-1}
+        className="relative py-16 md:py-20 bg-[#F8FAF8] overflow-hidden scroll-mt-20 focus:outline-hidden"
+      >
         {/* Soft curved organic mint backdrop on the right side */}
         <div
           className="hidden lg:block absolute top-12 -right-28 w-[640px] h-[640px] rounded-full pointer-events-none"
@@ -263,6 +272,11 @@ export const LandingPage: React.FC = () => {
       {/* 7. SECTION 07 · FINAL CTA + INSTRUCTOR DEMAND FEED        */}
       {/* ========================================================= */}
       <InstructorStudioPreview />
+
+      {/* ========================================================= */}
+      {/* 8. SECTION 08 · TURN INTEREST INTO OPPORTUNITY            */}
+      {/* ========================================================= */}
+      <FinalCtaSection />
     </div>
   );
 };

@@ -1,18 +1,33 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
-import { Lock, Mail, User, ArrowRight, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import {
+  Lock,
+  Mail,
+  User,
+  ArrowRight,
+  Loader2,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  GraduationCap,
+  Store,
+} from 'lucide-react';
 
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
+
+  const initialRole = searchParams.get('role') === 'instructor' ? 'instructor' : 'learner';
+  const referralCodeFromUrl = searchParams.get('ref') || '';
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'learner' | 'instructor'>('learner');
-  const [referralCode, setReferralCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole] = useState<'learner' | 'instructor'>(initialRole);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +41,7 @@ export const SignUpPage: React.FC = () => {
         password,
         full_name: fullName,
         role,
-        referral_code: referralCode.trim() || undefined,
+        referral_code: referralCodeFromUrl.trim() || undefined,
       });
       login(data.access_token, data);
       if (data.role === 'instructor') {
@@ -42,123 +57,150 @@ export const SignUpPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-md my-8">
-      <div className="bg-white rounded-2xl border border-warmgray p-8 shadow-sm space-y-6">
-          <div className="text-center space-y-1">
-            <h1 className="text-2xl font-serif text-charcoal">Create an Account</h1>
-            <p className="text-xs text-charcoal/60">Join NUVENDRY to shape demand and access live workshops.</p>
+    <div className="w-full flex flex-col items-center">
+      {/* Editorial Page Heading */}
+      <div className="text-center">
+        <h1 className="font-serif font-medium text-[36px] sm:text-[42px] text-[#0E1E1B] tracking-[-0.015em] leading-[1.12]">
+          Create Your Account
+        </h1>
+        <div className="w-14 h-[2.5px] rounded-full bg-[#197B4F] mx-auto my-3.5" />
+        <p className="text-[14.5px] text-[#4A5550] font-normal">Get started in seconds</p>
+      </div>
+
+      {/* Elevated Ivory Auth Card */}
+      <div className="mt-7 w-full max-w-[420px] bg-[#FCFCFA] rounded-[24px] border border-[#ECEFEA] px-7 py-7 sm:px-8 sm:py-8 shadow-[0_20px_50px_rgba(15,40,28,0.06),0_4px_14px_rgba(15,40,28,0.025)]">
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* Full Name */}
+          <div className="relative flex items-center">
+            <User className="w-[18px] h-[18px] text-[#374151] stroke-[1.75] absolute left-4 pointer-events-none" />
+            <input
+              type="text"
+              required
+              autoComplete="name"
+              aria-label="Full name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Full name"
+              className="w-full h-[48px] pl-11 pr-4 rounded-[12px] bg-[#FBFBF9] border border-[#DFDFE0] text-[14px] text-[#111827] placeholder-[#78827E] transition-all focus:outline-hidden focus:bg-white focus:border-[#166544] focus:ring-3 focus:ring-[#166544]/10"
+            />
           </div>
 
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-              <span>{error}</span>
-            </div>
-          )}
+          {/* Email Address */}
+          <div className="relative flex items-center">
+            <Mail className="w-[18px] h-[18px] text-[#374151] stroke-[1.75] absolute left-4 pointer-events-none" />
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              aria-label="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email address"
+              className="w-full h-[48px] pl-11 pr-4 rounded-[12px] bg-[#FBFBF9] border border-[#DFDFE0] text-[14px] text-[#111827] placeholder-[#78827E] transition-all focus:outline-hidden focus:bg-white focus:border-[#166544] focus:ring-3 focus:ring-[#166544]/10"
+            />
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-charcoal/70 mb-1">Full Name</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 bg-ivory border border-warmgray rounded-xl text-xs text-charcoal focus:outline-hidden focus:ring-1 focus:ring-forest"
-                  placeholder="e.g. Alex Morgan"
-                />
-                <User className="w-4 h-4 text-charcoal/40 absolute left-3 top-3" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-charcoal/70 mb-1">Email Address</label>
-              <div className="relative">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 bg-ivory border border-warmgray rounded-xl text-xs text-charcoal focus:outline-hidden focus:ring-1 focus:ring-forest"
-                  placeholder="name@example.com"
-                />
-                <Mail className="w-4 h-4 text-charcoal/40 absolute left-3 top-3" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-charcoal/70 mb-1">Password</label>
-              <div className="relative">
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 bg-ivory border border-warmgray rounded-xl text-xs text-charcoal focus:outline-hidden focus:ring-1 focus:ring-forest"
-                  placeholder="••••••••"
-                />
-                <Lock className="w-4 h-4 text-charcoal/40 absolute left-3 top-3" />
-              </div>
-            </div>
-
-            {/* Role Select */}
-            <div>
-              <label className="block text-xs font-medium text-charcoal/70 mb-1.5">I want to join as:</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRole('learner')}
-                  className={`p-2.5 rounded-xl border text-xs font-medium transition-all ${
-                    role === 'learner'
-                      ? 'border-forest bg-mint/50 text-forest font-semibold'
-                      : 'border-warmgray bg-ivory text-charcoal/70 hover:bg-warmgray'
-                  }`}
-                >
-                  Learner / Buyer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('instructor')}
-                  className={`p-2.5 rounded-xl border text-xs font-medium transition-all ${
-                    role === 'instructor'
-                      ? 'border-forest bg-mint/50 text-forest font-semibold'
-                      : 'border-warmgray bg-ivory text-charcoal/70 hover:bg-warmgray'
-                  }`}
-                >
-                  Instructor / Merchant
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-charcoal/70 mb-1">Referral Code (Optional)</label>
-              <input
-                type="text"
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value)}
-                className="w-full px-3 py-2 bg-ivory border border-warmgray rounded-xl text-xs text-charcoal focus:outline-hidden focus:ring-1 focus:ring-forest"
-                placeholder="NV-XXXXXX"
-              />
-            </div>
-
+          {/* Password */}
+          <div className="relative flex items-center">
+            <Lock className="w-[18px] h-[18px] text-[#374151] stroke-[1.75] absolute left-4 pointer-events-none" />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              required
+              autoComplete="new-password"
+              aria-label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full h-[48px] pl-11 pr-11 rounded-[12px] bg-[#FBFBF9] border border-[#DFDFE0] text-[14px] text-[#111827] placeholder-[#78827E] transition-all focus:outline-hidden focus:bg-white focus:border-[#166544] focus:ring-3 focus:ring-[#166544]/10"
+            />
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-forest hover:bg-charcoal text-ivory text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-xs"
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-3.5 p-1 text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Create Account</span>}
+              {showPassword ? (
+                <Eye className="w-[18px] h-[18px] stroke-[1.75]" />
+              ) : (
+                <EyeOff className="w-[18px] h-[18px] stroke-[1.75]" />
+              )}
             </button>
-          </form>
-
-          <div className="text-center text-xs text-charcoal/60">
-            Already have an account?{' '}
-            <Link to="/sign-in" className="text-forest font-semibold hover:underline">
-              Sign In
-            </Link>
           </div>
+
+          {/* Segmented Role Selector: Learner | Instructor */}
+          <div className="pt-1 pb-1">
+            <div
+              role="group"
+              aria-label="Account role"
+              className="w-full p-1 rounded-[13px] bg-[#FBFBF9] border border-[#E2E6E3] grid grid-cols-2 gap-1"
+            >
+              <button
+                type="button"
+                aria-pressed={role === 'learner'}
+                onClick={() => setRole('learner')}
+                className={`h-[42px] rounded-[10px] text-[13.5px] font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  role === 'learner'
+                    ? 'bg-[#DFEFE5] text-[#14583B] shadow-[inset_0_0_0_1px_rgba(20,88,59,0.08)]'
+                    : 'bg-transparent text-[#1F2937] hover:bg-[#F2F5F3]'
+                }`}
+              >
+                <GraduationCap className="w-[18px] h-[18px] stroke-[1.8]" />
+                <span>Learner</span>
+              </button>
+
+              <button
+                type="button"
+                aria-pressed={role === 'instructor'}
+                onClick={() => setRole('instructor')}
+                className={`h-[42px] rounded-[10px] text-[13.5px] font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  role === 'instructor'
+                    ? 'bg-[#DFEFE5] text-[#14583B] shadow-[inset_0_0_0_1px_rgba(20,88,59,0.08)]'
+                    : 'bg-transparent text-[#1F2937] hover:bg-[#F2F5F3]'
+                }`}
+              >
+                <Store className="w-[17px] h-[17px] stroke-[1.8]" />
+                <span>Instructor</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Primary Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full h-[50px] rounded-[13px] bg-[#115538] hover:bg-[#0C3E28] disabled:opacity-60 text-white font-semibold text-[15px] shadow-[0_6px_18px_rgba(17,85,56,0.22)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <span>Create Account</span>
+                <ArrowRight className="w-4 h-4 stroke-[2]" />
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Bottom Switch Link */}
+        <div className="mt-6 text-center text-[13.5px] text-[#374151]">
+          Already have an account?{' '}
+          <Link
+            to="/sign-in"
+            className="font-bold text-[#186A47] hover:text-[#0F4930] hover:underline ml-0.5"
+          >
+            Sign In
+          </Link>
         </div>
       </div>
+    </div>
   );
 };
 
+export default SignUpPage;

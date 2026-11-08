@@ -132,7 +132,11 @@ export const RewardsShowcase: React.FC = () => {
   };
 
   return (
-    <section className="relative py-16 md:py-20 bg-[#F8FAF8] text-[#111827] overflow-hidden border-t border-[#EBF0EC]">
+    <section
+      id="rewards"
+      tabIndex={-1}
+      className="relative py-16 md:py-20 bg-[#F8FAF8] text-[#111827] overflow-hidden border-t border-[#EBF0EC] scroll-mt-20 focus:outline-hidden"
+    >
       {/* Top-Left Soft Organic Mint Wave Backdrop */}
       <div
         className="hidden lg:block absolute top-20 -left-32 w-[540px] h-[540px] rounded-full pointer-events-none"

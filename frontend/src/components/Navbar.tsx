@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Sparkles, ArrowRight, Menu, X, LogOut, ShieldCheck, 
-  ChevronDown, BookOpen, Layers, Tag, Award, User
+import { scrollToSectionById } from '../layouts/PublicLayout';
+import {
+  Sparkles,
+  ArrowRight,
+  Menu,
+  X,
+  LogOut,
+  ShieldCheck,
+  ChevronDown,
+  BookOpen,
+  User,
 } from 'lucide-react';
 
 const NAV_LINKS = [
   { name: 'Discover Workshops', path: '/workshops' },
-  { name: 'AI Demand', path: '/demand' },
-  { name: 'How It Works', path: '/how-it-works' },
-  { name: 'Rewards', path: '/rewards' },
-  { name: 'For Instructors', path: '/for-instructors' },
+  { name: 'AI Demand', path: '/#ai-demand' },
+  { name: 'How It Works', path: '/#how-it-works' },
+  { name: 'Rewards', path: '/#rewards' },
+  { name: 'For Instructors', path: '/#for-instructors' },
 ];
 
 export const Navbar: React.FC = () => {
@@ -23,11 +31,11 @@ export const Navbar: React.FC = () => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Close mobile menu on route change
+  // Close mobile menu and user dropdown on route or hash change
   useEffect(() => {
     setMobileMenuOpen(false);
     setUserDropdownOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, location.hash]);
 
   // Handle elevation on scroll
   useEffect(() => {
@@ -62,33 +70,52 @@ export const Navbar: React.FC = () => {
     return 'Learner Hub';
   };
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => {
+    if (path.startsWith('/#')) {
+      const targetHash = path.slice(1);
+      return location.pathname === '/' && location.hash === targetHash;
+    }
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+    setMobileMenuOpen(false);
+    if (path.startsWith('/#')) {
+      const targetHash = path.slice(1);
+      if (location.pathname === '/' && location.hash === targetHash) {
+        e.preventDefault();
+        scrollToSectionById(targetHash.slice(1));
+      }
+    } else if (path === '/' && location.pathname === '/' && !location.hash) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   return (
-    <header 
+    <header
       className={`sticky top-0 z-50 transition-all duration-200 border-b ${
-        scrolled 
-          ? 'bg-white/95 backdrop-blur-md border-gray-200 shadow-xs' 
+        scrolled
+          ? 'bg-white/95 backdrop-blur-md border-gray-200 shadow-xs'
           : 'bg-white border-gray-200/70'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Wordmark */}
-        <Link 
-          to="/" 
+        <Link
+          to="/"
+          onClick={(e) => handleNavClick(e, '/')}
           className="flex items-center space-x-2.5 group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-forest rounded-lg py-1 pr-2"
           aria-label="NUVENDRY Home"
         >
           <div className="w-8 h-8 rounded-lg bg-[#0e3c2f] flex items-center justify-center text-white font-bold text-base shadow-xs">
             N
           </div>
-          <span className="font-bold text-lg tracking-tight text-charcoal">
-            NUVENDRY
-          </span>
+          <span className="font-bold text-lg tracking-tight text-charcoal">NUVENDRY</span>
         </Link>
 
         {/* Desktop Navigation Links */}
-        <nav 
+        <nav
           className="hidden md:flex items-center space-x-6 lg:space-x-7"
           aria-label="Main Navigation"
         >
@@ -98,9 +125,13 @@ export const Navbar: React.FC = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`text-xs font-medium transition-colors ${
-                  active 
-                    ? 'text-[#0e3c2f] font-semibold' 
+                onClick={(e) => handleNavClick(e, link.path)}
+                aria-current={
+                  active ? (link.path.startsWith('/#') ? 'location' : 'page') : undefined
+                }
+                className={`text-xs font-medium transition-colors rounded-md px-1 py-0.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#0e3c2f] ${
+                  active
+                    ? 'text-[#0e3c2f] font-semibold'
                     : 'text-charcoal/80 hover:text-charcoal'
                 }`}
               >
@@ -139,13 +170,15 @@ export const Navbar: React.FC = () => {
 
               {/* Accessible Dropdown Menu */}
               {userDropdownOpen && (
-                <div 
+                <div
                   className="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-warmgray p-1.5 shadow-lg space-y-1 z-50 text-xs text-charcoal"
                   role="menu"
                 >
                   <div className="px-3 py-2 border-b border-warmgray/60">
                     <div className="font-semibold text-charcoal truncate">{user?.full_name}</div>
-                    <div className="text-[11px] text-charcoal/60 truncate font-mono">{user?.email}</div>
+                    <div className="text-[11px] text-charcoal/60 truncate font-mono">
+                      {user?.email}
+                    </div>
                   </div>
 
                   <Link
@@ -223,14 +256,14 @@ export const Navbar: React.FC = () => {
           <div className="px-2 py-1 text-[11px] font-mono uppercase tracking-wider text-charcoal/50">
             Platform Navigation
           </div>
-          <nav className="space-y-1">
+          <nav className="space-y-1" aria-label="Mobile Navigation">
             {NAV_LINKS.map((link) => {
               const active = isActive(link.path);
               return (
                 <Link
                   key={link.path}
                   to={link.path}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={(e) => handleNavClick(e, link.path)}
                   className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
                     active
                       ? 'bg-mint text-forest font-semibold'

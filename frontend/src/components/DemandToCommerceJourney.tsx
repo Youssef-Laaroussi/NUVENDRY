@@ -199,7 +199,11 @@ export const DemandToCommerceJourney: React.FC<Props> = ({ clusters = [], worksh
   const activeWorkshop = workshops.length > 0 ? workshops[0] : null;
 
   return (
-    <section className="relative py-16 md:py-20 bg-[#F8FAF8] text-[#111827] overflow-hidden">
+    <section
+      id="marketplace-journey"
+      tabIndex={-1}
+      className="relative py-16 md:py-20 bg-[#F8FAF8] text-[#111827] overflow-hidden scroll-mt-20 focus:outline-hidden"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* ========================================================= */}
         {/* Section Header                                            */}

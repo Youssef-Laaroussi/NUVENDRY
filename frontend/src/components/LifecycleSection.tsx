@@ -104,7 +104,11 @@ const Step4Illustration: React.FC = () => (
 
 export const LifecycleSection: React.FC = () => {
   return (
-    <section className="relative py-20 bg-white overflow-hidden select-none">
+    <section
+      id="how-it-works"
+      tabIndex={-1}
+      className="relative py-20 bg-white overflow-hidden select-none scroll-mt-20 focus:outline-hidden"
+    >
       {/* ========================================================= */}
       {/* Background Flowing Waves on Top Left and Top Right        */}
       {/* ========================================================= */}
