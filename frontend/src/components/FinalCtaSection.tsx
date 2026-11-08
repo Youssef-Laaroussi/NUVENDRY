@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { ArrowRight, User, Layers, Zap } from 'lucide-react';
 import finalCtaLaptopImg from '../assets/final-cta-laptop.jpg';
 import { scrollToSectionById } from '../layouts/PublicLayout';
@@ -97,26 +98,30 @@ export const FinalCtaSection: React.FC = () => {
             </p>
 
             <div className="flex flex-wrap items-center gap-3.5 pt-2">
-              <Link
-                to="/workshops"
-                className="px-6 py-3.5 rounded-[12px] bg-[#104631] hover:bg-[#0A3122] text-white text-[14px] font-semibold inline-flex items-center justify-center gap-2 shadow-[0_6px_18px_rgba(16,70,49,0.20)] transition-all group"
-              >
-                <span>Discover Workshops</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
+              <motion.div whileTap={{ scale: 0.98 }} whileHover={{ scale: 1.015 }}>
+                <Link
+                  to="/workshops"
+                  className="nv-btn-press px-6 py-3.5 rounded-[12px] bg-[#104631] hover:bg-[#0A3122] text-white text-[14px] font-semibold inline-flex items-center justify-center gap-2 shadow-[0_6px_18px_rgba(16,70,49,0.20)] transition-all group"
+                >
+                  <span>Discover Workshops</span>
+                  <ArrowRight className="w-4 h-4 nv-icon-slide" />
+                </Link>
+              </motion.div>
 
-              <Link
-                to="/#for-instructors"
-                onClick={(e) => {
-                  if (location.pathname === '/' && location.hash === '#for-instructors') {
-                    e.preventDefault();
-                    scrollToSectionById('for-instructors');
-                  }
-                }}
-                className="px-6 py-3.5 rounded-[12px] bg-white hover:bg-[#F7FAF8] text-[#111827] border border-[#E2EAE5] text-[14px] font-bold inline-flex items-center justify-center shadow-[0_4px_14px_rgba(15,41,30,0.06)] transition-all"
-              >
-                <span>Become an Instructor</span>
-              </Link>
+              <motion.div whileTap={{ scale: 0.98 }} whileHover={{ scale: 1.015 }}>
+                <Link
+                  to="/#for-instructors"
+                  onClick={(e) => {
+                    if (location.pathname === '/' && location.hash === '#for-instructors') {
+                      e.preventDefault();
+                      scrollToSectionById('for-instructors');
+                    }
+                  }}
+                  className="nv-btn-press px-6 py-3.5 rounded-[12px] bg-white hover:bg-[#F7FAF8] text-[#111827] border border-[#E2EAE5] text-[14px] font-bold inline-flex items-center justify-center shadow-[0_4px_14px_rgba(15,41,30,0.06)] transition-all"
+                >
+                  <span>Become an Instructor</span>
+                </Link>
+              </motion.div>
             </div>
           </div>
 
@@ -143,59 +148,95 @@ export const FinalCtaSection: React.FC = () => {
             {/* Left Stack: 3 Connected Feature Cards */}
             <div className="relative z-20 flex flex-col items-start shrink-0">
               {/* Card 1: Learn In-Demand Skills */}
-              <div className="w-[258px] sm:w-[268px] bg-white rounded-2xl border border-[#E6EFE9] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,41,30,0.06)] flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-xl bg-[#EAF6EF] text-[#156847] flex items-center justify-center shrink-0">
-                  <User className="w-5 h-5 stroke-[1.9]" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-[13.5px] text-[#111827] leading-tight">
-                    Learn In-Demand Skills
-                  </h3>
-                  <p className="text-[11.5px] text-[#4B5563] leading-snug mt-0.5">
-                    AI, data, MLOps, and more.
-                  </p>
-                </div>
-              </div>
+              <motion.div
+                whileHover={{ x: 5, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+                whileTap={{ scale: 0.985 }}
+              >
+                <Link
+                  to="/workshops"
+                  className="nv-card-lift w-[258px] sm:w-[268px] bg-white rounded-2xl border border-[#E6EFE9] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,41,30,0.06)] hover:shadow-[0_12px_28px_rgba(15,41,30,0.09)] flex items-center gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#156847]"
+                >
+                  <div className="w-11 h-11 rounded-xl bg-[#EAF6EF] text-[#156847] flex items-center justify-center shrink-0">
+                    <User className="w-5 h-5 stroke-[1.9]" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-[13.5px] text-[#111827] leading-tight">
+                      Learn In-Demand Skills
+                    </h3>
+                    <p className="text-[11.5px] text-[#4B5563] leading-snug mt-0.5">
+                      AI, data, MLOps, and more.
+                    </p>
+                  </div>
+                </Link>
+              </motion.div>
 
               {/* Vertical Green Connector 1 -> 2 */}
               <div className="ml-[37px] w-[1.5px] h-3.5 bg-[#76BB9A]" />
 
               {/* Card 2: Share Your Expertise */}
-              <div className="w-[258px] sm:w-[268px] bg-white rounded-2xl border border-[#E6EFE9] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,41,30,0.06)] flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-xl bg-[#EAF6EF] text-[#156847] flex items-center justify-center shrink-0">
-                  <Layers className="w-5 h-5 stroke-[1.9]" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-[13.5px] text-[#111827] leading-tight">
-                    Share Your Expertise
-                  </h3>
-                  <p className="text-[11.5px] text-[#4B5563] leading-snug mt-0.5">
-                    Turn knowledge into
-                    <br />
-                    real opportunities.
-                  </p>
-                </div>
-              </div>
+              <motion.div
+                whileHover={{ x: 5, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+                whileTap={{ scale: 0.985 }}
+              >
+                <Link
+                  to="/#for-instructors"
+                  onClick={(e) => {
+                    if (location.pathname === '/') {
+                      e.preventDefault();
+                      scrollToSectionById('for-instructors');
+                    }
+                  }}
+                  className="nv-card-lift w-[258px] sm:w-[268px] bg-white rounded-2xl border border-[#E6EFE9] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,41,30,0.06)] hover:shadow-[0_12px_28px_rgba(15,41,30,0.09)] flex items-center gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#156847]"
+                >
+                  <div className="w-11 h-11 rounded-xl bg-[#EAF6EF] text-[#156847] flex items-center justify-center shrink-0">
+                    <Layers className="w-5 h-5 stroke-[1.9]" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-[13.5px] text-[#111827] leading-tight">
+                      Share Your Expertise
+                    </h3>
+                    <p className="text-[11.5px] text-[#4B5563] leading-snug mt-0.5">
+                      Turn knowledge into
+                      <br />
+                      real opportunities.
+                    </p>
+                  </div>
+                </Link>
+              </motion.div>
 
               {/* Vertical Green Connector 2 -> 3 */}
               <div className="ml-[37px] w-[1.5px] h-3.5 bg-[#76BB9A]" />
 
               {/* Card 3: Get Real Rewards */}
-              <div className="w-[258px] sm:w-[268px] bg-white rounded-2xl border border-[#E6EFE9] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,41,30,0.06)] flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-xl bg-[#F2F7FC] border border-[#E5EFF9] flex items-center justify-center shrink-0">
-                  <PayPalBlueMark className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-[13.5px] text-[#111827] leading-tight">
-                    Get Real Rewards
-                  </h3>
-                  <p className="text-[11.5px] text-[#4B5563] leading-snug mt-0.5">
-                    Secure checkout via
-                    <br />
-                    PayPal Sandbox.
-                  </p>
-                </div>
-              </div>
+              <motion.div
+                whileHover={{ x: 5, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+                whileTap={{ scale: 0.985 }}
+              >
+                <Link
+                  to="/#rewards"
+                  onClick={(e) => {
+                    if (location.pathname === '/') {
+                      e.preventDefault();
+                      scrollToSectionById('rewards');
+                    }
+                  }}
+                  className="nv-card-lift w-[258px] sm:w-[268px] bg-white rounded-2xl border border-[#E6EFE9] px-4 py-3.5 shadow-[0_8px_24px_rgba(15,41,30,0.06)] hover:shadow-[0_12px_28px_rgba(15,41,30,0.09)] flex items-center gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#156847]"
+                >
+                  <div className="w-11 h-11 rounded-xl bg-[#F2F7FC] border border-[#E5EFF9] flex items-center justify-center shrink-0">
+                    <PayPalBlueMark className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-[13.5px] text-[#111827] leading-tight">
+                      Get Real Rewards
+                    </h3>
+                    <p className="text-[11.5px] text-[#4B5563] leading-snug mt-0.5">
+                      Secure checkout via
+                      <br />
+                      PayPal Sandbox.
+                    </p>
+                  </div>
+                </Link>
+              </motion.div>
             </div>
 
             {/* Subtle Diagonal Connector + Green Node Dot between Stack & 3D Frame */}
@@ -209,7 +250,14 @@ export const FinalCtaSection: React.FC = () => {
                   stroke="#8AC7AA"
                   strokeWidth="1.4"
                 />
-                <circle cx="19" cy="24" r="3.5" fill="#18794E" />
+                <motion.circle
+                  cx="19"
+                  cy="24"
+                  r="3.5"
+                  fill="#18794E"
+                  animate={{ r: [3.5, 4.3, 3.5], opacity: [0.85, 1, 0.85] }}
+                  transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+                />
               </svg>
             </div>
 

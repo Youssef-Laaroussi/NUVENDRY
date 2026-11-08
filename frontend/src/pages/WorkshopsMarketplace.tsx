@@ -1,24 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { WorkshopCard } from '../components/WorkshopCard';
-import { api } from '../api/client';
+import { api, useSyncRefresh } from '../api/client';
 import { Workshop } from '../types';
-import { Search, ChevronDown, Sparkles, BookOpen } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Search, Sparkles, BookOpen, X } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 
 const CATEGORIES = ["All", "AI & LLMs", "MLOps", "Full-Stack", "Data", "DevOps"];
 
 export const WorkshopsMarketplace: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('search') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedLevel, setSelectedLevel] = useState('All');
   const [selectedFormat, setSelectedFormat] = useState('All');
+  const [selectedDateSort, setSelectedDateSort] = useState('All');
 
-  const fetchWorkshops = async () => {
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 220);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  const fetchWorkshops = useCallback(async () => {
     setLoading(true);
     try {
-      // Map category
       let catParam: string | undefined;
       if (selectedCategory === 'MLOps') catParam = 'MLOps';
       else if (selectedCategory === 'Full-Stack') catParam = 'React + FastAPI';
@@ -26,7 +35,7 @@ export const WorkshopsMarketplace: React.FC = () => {
 
       const data = await api.getWorkshops({
         category: catParam,
-        search: search.trim() || undefined
+        search: debouncedSearch || undefined,
       });
       setWorkshops(data);
     } catch (err) {
@@ -34,15 +43,85 @@ export const WorkshopsMarketplace: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCategory, debouncedSearch]);
 
   useEffect(() => {
     fetchWorkshops();
-  }, [selectedCategory, selectedLevel, selectedFormat]);
+  }, [fetchWorkshops]);
+
+  useSyncRefresh(['workshops', 'reservations'], fetchWorkshops);
+
+  const filteredAndSortedWorkshops = useMemo(() => {
+    let list = [...workshops];
+
+    // Category refinement for Data / DevOps keywords on actual published records
+    if (selectedCategory === 'Data') {
+      list = list.filter((w) =>
+        `${w.category} ${w.title} ${w.description}`.toLowerCase().match(/data|pipeline|postgres|mlops/)
+      );
+    } else if (selectedCategory === 'DevOps') {
+      list = list.filter((w) =>
+        `${w.category} ${w.title} ${w.description}`.toLowerCase().match(/devops|deploy|production|monitoring|mlops/)
+      );
+    }
+
+    // Difficulty filter on actual records
+    if (selectedLevel !== 'All') {
+      const targetLvl = selectedLevel.toLowerCase();
+      list = list.filter((w) => w.difficulty.toLowerCase().includes(targetLvl));
+    }
+
+    // Format filter on actual records
+    if (selectedFormat === 'live') {
+      list = list.filter((w) => w.duration_hours <= 2);
+    } else if (selectedFormat === 'workshop') {
+      list = list.filter((w) => w.duration_hours >= 2);
+    }
+
+    // Date & Sort filter on actual records
+    if (selectedDateSort === 'weekend') {
+      list = list.filter((w) => {
+        const day = new Date(w.scheduled_at).getUTCDay();
+        return day === 0 || day === 6 || day === 5;
+      });
+    } else if (selectedDateSort === 'next14') {
+      const timestamps = list.map((w) => new Date(w.scheduled_at).getTime()).filter((t) => !isNaN(t));
+      const anchor = timestamps.length > 0 ? Math.min(...timestamps) : Date.now();
+      const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+      list = list.filter((w) => {
+        const t = new Date(w.scheduled_at).getTime();
+        return t - anchor <= fourteenDaysMs;
+      });
+    } else if (selectedDateSort === 'soonest') {
+      list.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+    } else if (selectedDateSort === 'price_asc') {
+      list.sort((a, b) => a.price_cents - b.price_cents);
+    } else if (selectedDateSort === 'seats_desc') {
+      list.sort((a, b) => b.remaining_seats - a.remaining_seats);
+    }
+
+    return list;
+  }, [workshops, selectedCategory, selectedLevel, selectedFormat, selectedDateSort]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchWorkshops();
+    setDebouncedSearch(search.trim());
+  };
+
+  const hasActiveFilters =
+    selectedCategory !== 'All' ||
+    selectedLevel !== 'All' ||
+    selectedFormat !== 'All' ||
+    selectedDateSort !== 'All' ||
+    search.trim().length > 0;
+
+  const resetAllFilters = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setSelectedCategory('All');
+    setSelectedLevel('All');
+    setSelectedFormat('All');
+    setSelectedDateSort('All');
   };
 
   return (
@@ -63,23 +142,36 @@ export const WorkshopsMarketplace: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {/* Search Input */}
             <form onSubmit={handleSearchSubmit} className="relative flex-1">
-              <Search className="w-4 h-4 text-charcoal/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-charcoal/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search by topic, skill, or instructor..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-warmgray bg-white text-xs text-charcoal placeholder-charcoal/40 focus:outline-hidden focus:ring-2 focus:ring-forest shadow-2xs"
+                className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-warmgray bg-white text-xs text-charcoal placeholder-charcoal/40 focus:outline-none focus:ring-2 focus:ring-forest shadow-2xs"
               />
+              {search.length > 0 && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => {
+                    setSearch('');
+                    setDebouncedSearch('');
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-charcoal/40 hover:text-charcoal"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </form>
 
             {/* Filter Dropdowns */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <select
                 value={selectedLevel}
                 onChange={(e) => setSelectedLevel(e.target.value)}
                 aria-label="Filter by level"
-                className="px-3 py-2.5 rounded-xl border border-warmgray bg-white text-xs text-charcoal font-medium hover:bg-ivory cursor-pointer shadow-2xs focus:outline-hidden focus:ring-1 focus:ring-forest"
+                className="px-3 py-2.5 rounded-xl border border-warmgray bg-white text-xs text-charcoal font-medium hover:bg-ivory cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-forest"
               >
                 <option value="All">Level ▾</option>
                 <option value="beginner">Beginner</option>
@@ -91,20 +183,25 @@ export const WorkshopsMarketplace: React.FC = () => {
                 value={selectedFormat}
                 onChange={(e) => setSelectedFormat(e.target.value)}
                 aria-label="Filter by format"
-                className="px-3 py-2.5 rounded-xl border border-warmgray bg-white text-xs text-charcoal font-medium hover:bg-ivory cursor-pointer shadow-2xs focus:outline-hidden focus:ring-1 focus:ring-forest"
+                className="px-3 py-2.5 rounded-xl border border-warmgray bg-white text-xs text-charcoal font-medium hover:bg-ivory cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-forest"
               >
                 <option value="All">Format ▾</option>
-                <option value="live">Live Lab</option>
-                <option value="workshop">Workshop</option>
+                <option value="live">Live Lab (≤ 2h)</option>
+                <option value="workshop">Full Workshop (2h+)</option>
               </select>
 
-              <select 
-                aria-label="Filter by date"
-                className="px-3 py-2.5 rounded-xl border border-warmgray bg-white text-xs text-charcoal font-medium hover:bg-ivory cursor-pointer shadow-2xs focus:outline-hidden focus:ring-1 focus:ring-forest"
+              <select
+                value={selectedDateSort}
+                onChange={(e) => setSelectedDateSort(e.target.value)}
+                aria-label="Filter by date or sort order"
+                className="px-3 py-2.5 rounded-xl border border-warmgray bg-white text-xs text-charcoal font-medium hover:bg-ivory cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-forest"
               >
-                <option>Date ▾</option>
-                <option>This Weekend</option>
-                <option>Next 14 Days</option>
+                <option value="All">Date ▾</option>
+                <option value="weekend">This Weekend</option>
+                <option value="next14">Next 14 Days</option>
+                <option value="soonest">Sort: Soonest Date</option>
+                <option value="price_asc">Sort: Price Low → High</option>
+                <option value="seats_desc">Sort: Most Seats Left</option>
               </select>
             </div>
           </div>
@@ -114,8 +211,10 @@ export const WorkshopsMarketplace: React.FC = () => {
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
+                type="button"
+                aria-pressed={selectedCategory === cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                className={`nv-btn-press nv-chip-interactive px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest ${
                   selectedCategory === cat
                     ? 'bg-[#205C49] text-white font-semibold shadow-xs'
                     : 'bg-white border border-warmgray text-charcoal/70 hover:bg-white/80'
@@ -124,6 +223,15 @@ export const WorkshopsMarketplace: React.FC = () => {
                 {cat}
               </button>
             ))}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="nv-btn-press px-3 py-1.5 rounded-full text-xs font-medium text-forest hover:bg-mint/50 transition-colors whitespace-nowrap"
+              >
+                Reset filters
+              </button>
+            )}
           </div>
         </div>
 
@@ -138,9 +246,9 @@ export const WorkshopsMarketplace: React.FC = () => {
               </div>
             ))}
           </div>
-        ) : workshops.length > 0 ? (
+        ) : filteredAndSortedWorkshops.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {workshops.map((w) => (
+            {filteredAndSortedWorkshops.map((w) => (
               <WorkshopCard key={w.id} workshop={w} />
             ))}
           </div>
@@ -151,12 +259,23 @@ export const WorkshopsMarketplace: React.FC = () => {
             <p className="text-xs text-charcoal/60">
               Try adjusting your category or search keywords. If you don't find what you need, submit a request and shape a new workshop!
             </p>
-            <Link
-              to="/demand"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-forest text-ivory text-xs font-semibold rounded-lg hover:bg-charcoal transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-gold" /> Request This Workshop
-            </Link>
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetAllFilters}
+                  className="nv-btn-press px-4 py-2 bg-ivory border border-warmgray text-charcoal text-xs font-semibold rounded-lg hover:bg-warmgray/40 transition-colors"
+                >
+                  Clear All Filters
+                </button>
+              )}
+              <Link
+                to="/demand"
+                className="nv-btn-press inline-flex items-center gap-1.5 px-4 py-2 bg-forest text-ivory text-xs font-semibold rounded-lg hover:bg-charcoal transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-gold" /> Request This Workshop
+              </Link>
+            </div>
           </div>
         )}
       </div>

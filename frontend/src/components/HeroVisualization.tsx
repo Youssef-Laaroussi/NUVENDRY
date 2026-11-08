@@ -1,6 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { User, Layers, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Workshop } from '../types';
+import { scrollToSectionById } from '../layouts/PublicLayout';
 import laptopImg from '../assets/laptop-mockup.jpg';
 
 export const PayPalOfficialLogo: React.FC<{ className?: string }> = ({ className = "h-7 w-auto" }) => (
@@ -27,7 +30,32 @@ export const PayPalOfficialLogo: React.FC<{ className?: string }> = ({ className
   </svg>
 );
 
-export const HeroVisualization: React.FC = () => {
+interface HeroVisualizationProps {
+  workshops?: Workshop[];
+  onSelectStage?: (stage: 1 | 2 | 3 | 4) => void;
+}
+
+export const HeroVisualization: React.FC<HeroVisualizationProps> = ({
+  workshops = [],
+  onSelectStage,
+}) => {
+  const matchedLangGraph =
+    workshops.find((w) => w.category === 'LangGraph Agents' && !w.id.startsWith('fallback-')) ||
+    workshops.find((w) => !w.id.startsWith('fallback-'));
+  const reserveHref = matchedLangGraph ? `/workshops/${matchedLangGraph.id}` : '/workshops';
+
+  const handleStageActivate = (stage: 1 | 2 | 3 | 4) => {
+    onSelectStage?.(stage);
+    scrollToSectionById('marketplace-journey');
+  };
+
+  const handleKeyActivate = (e: React.KeyboardEvent, stage: 1 | 2 | 3 | 4) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleStageActivate(stage);
+    }
+  };
+
   return (
     <div className="relative w-full max-w-2xl mx-auto lg:max-w-none py-2 select-none">
       {/* Soft organic green gradient blob in background matching reference */}
@@ -44,8 +72,19 @@ export const HeroVisualization: React.FC = () => {
         <div className="md:col-span-6 flex flex-col space-y-0 w-full max-w-[340px] mx-auto md:mx-0">
           
           {/* 1. Demand Card */}
-          <div className="bg-white rounded-2xl p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-gray-100 flex items-start gap-3 w-full transition-transform hover:-translate-y-0.5">
-            <div className="w-10 h-10 rounded-xl bg-[#eaf5ee] text-[#14533c] flex items-center justify-center shrink-0">
+          <motion.div
+            role="button"
+            tabIndex={0}
+            aria-label="Inspect Stage 1: Learner Demand"
+            onClick={() => handleStageActivate(1)}
+            onKeyDown={(e) => handleKeyActivate(e, 1)}
+            whileHover={{ y: -4, scale: 1.015, transition: { type: 'spring', stiffness: 400, damping: 25 } }}
+            whileTap={{ scale: 0.985 }}
+            animate={{ y: [0, -3.5, 0] }}
+            transition={{ repeat: Infinity, duration: 5.2, ease: 'easeInOut' }}
+            className="group bg-white rounded-2xl p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.09)] border border-gray-100 flex items-start gap-3 w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14533c]"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#eaf5ee] text-[#14533c] flex items-center justify-center shrink-0 transition-transform duration-150 group-hover:scale-105">
               <User className="w-5 h-5 stroke-[2.2]" />
             </div>
             <div className="flex-1 min-w-0">
@@ -59,16 +98,32 @@ export const HeroVisualization: React.FC = () => {
                 “I want a hands-on workshop on LangGraph agents under $40.”
               </p>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Vertical dashed connector 1 -> 2 */}
-          <div className="w-full flex justify-center py-1">
+          {/* Vertical dashed connector 1 -> 2 with animated pulse signal */}
+          <div className="w-full flex justify-center py-1 relative">
             <div className="w-0 h-4 border-l-2 border-dashed border-[#a3d9bc]" />
+            <motion.div
+              animate={{ y: [-2, 14], opacity: [0, 1, 0] }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
+              className="absolute w-1.5 h-1.5 rounded-full bg-[#14533c] pointer-events-none"
+            />
           </div>
 
           {/* 2. AI Insight Card */}
-          <div className="bg-white rounded-2xl p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-gray-100 flex items-start gap-3 w-full transition-transform hover:-translate-y-0.5">
-            <div className="w-10 h-10 rounded-xl bg-[#eaf5ee] text-[#14533c] flex items-center justify-center shrink-0">
+          <motion.div
+            role="button"
+            tabIndex={0}
+            aria-label="Inspect Stage 2: AI Insight"
+            onClick={() => handleStageActivate(2)}
+            onKeyDown={(e) => handleKeyActivate(e, 2)}
+            whileHover={{ y: -4, scale: 1.015, transition: { type: 'spring', stiffness: 400, damping: 25 } }}
+            whileTap={{ scale: 0.985 }}
+            animate={{ y: [0, -3.5, 0] }}
+            transition={{ repeat: Infinity, duration: 5.8, ease: 'easeInOut', delay: 0.6 }}
+            className="group bg-white rounded-2xl p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.09)] border border-gray-100 flex items-start gap-3 w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14533c]"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#eaf5ee] text-[#14533c] flex items-center justify-center shrink-0 transition-transform duration-150 group-hover:scale-105">
               <Layers className="w-5 h-5 stroke-[2.2]" />
             </div>
             <div className="flex-1 min-w-0">
@@ -96,17 +151,33 @@ export const HeroVisualization: React.FC = () => {
                 </span>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Vertical dashed connector 2 -> 3 */}
-          <div className="w-full flex justify-center py-1">
+          {/* Vertical dashed connector 2 -> 3 with animated pulse signal */}
+          <div className="w-full flex justify-center py-1 relative">
             <div className="w-0 h-4 border-l-2 border-dashed border-[#a3d9bc]" />
+            <motion.div
+              animate={{ y: [-2, 14], opacity: [0, 1, 0] }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut', delay: 0.9 }}
+              className="absolute w-1.5 h-1.5 rounded-full bg-[#14533c] pointer-events-none"
+            />
           </div>
 
           {/* 3. Instructor Offer Card */}
-          <div className="bg-white rounded-2xl p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-gray-100 w-full transition-transform hover:-translate-y-0.5">
+          <motion.div
+            role="button"
+            tabIndex={0}
+            aria-label="Inspect Stage 3: Instructor Offer"
+            onClick={() => handleStageActivate(3)}
+            onKeyDown={(e) => handleKeyActivate(e, 3)}
+            whileHover={{ y: -4, scale: 1.015, transition: { type: 'spring', stiffness: 400, damping: 25 } }}
+            whileTap={{ scale: 0.985 }}
+            animate={{ y: [0, -3.5, 0] }}
+            transition={{ repeat: Infinity, duration: 5.4, ease: 'easeInOut', delay: 1.2 }}
+            className="group bg-white rounded-2xl p-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.09)] border border-gray-100 w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14533c]"
+          >
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-5 h-5 rounded-md bg-[#eaf5ee] text-[#14533c] flex items-center justify-center">
+              <div className="w-5 h-5 rounded-md bg-[#eaf5ee] text-[#14533c] flex items-center justify-center transition-transform duration-150 group-hover:scale-105">
                 <User className="w-3.5 h-3.5 stroke-[2.2]" />
               </div>
               <span className="w-5 h-5 rounded-full bg-[#d2e8dc] text-[#14533c] text-[11px] font-bold flex items-center justify-center shrink-0">
@@ -132,7 +203,7 @@ export const HeroVisualization: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
         </div>
 
@@ -140,16 +211,26 @@ export const HeroVisualization: React.FC = () => {
         <div className="md:col-span-6 relative flex flex-col items-center md:items-end w-full mt-4 md:mt-0">
           
           {/* Laptop Mockup in thick rounded white card matching reference */}
-          <div className="w-full max-w-[340px] sm:max-w-[380px] bg-white p-2.5 rounded-3xl shadow-[0_12px_32px_rgba(0,0,0,0.08)] border border-gray-100/90 overflow-hidden transition-transform hover:scale-[1.01]">
+          <motion.div
+            whileHover={{ scale: 1.018, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
+            animate={{ y: [0, -4, 0] }}
+            transition={{ repeat: Infinity, duration: 6.2, ease: 'easeInOut', delay: 0.4 }}
+            className="w-full max-w-[340px] sm:max-w-[380px] bg-white p-2.5 rounded-3xl shadow-[0_12px_32px_rgba(0,0,0,0.08)] border border-gray-100/90 overflow-hidden"
+          >
             <img
               src={laptopImg}
               alt="Code Editor Laptop"
               className="w-full h-auto rounded-2xl object-contain block bg-[#0f172a]"
             />
-          </div>
+          </motion.div>
 
           {/* 4. Pay with PayPal Card - Floating in foreground */}
-          <div className="w-56 sm:w-60 bg-white rounded-2xl p-4 shadow-[0_16px_36px_rgba(0,0,0,0.12)] border border-gray-100 -mt-12 sm:-mt-16 md:-mt-20 mr-0 md:mr-2 z-20">
+          <motion.div
+            whileHover={{ y: -5, scale: 1.025, transition: { type: 'spring', stiffness: 350, damping: 22 } }}
+            animate={{ y: [0, -3.5, 0] }}
+            transition={{ repeat: Infinity, duration: 4.8, ease: 'easeInOut', delay: 1.6 }}
+            className="w-56 sm:w-60 bg-white rounded-2xl p-4 shadow-[0_16px_36px_rgba(0,0,0,0.12)] border border-gray-100 -mt-12 sm:-mt-16 md:-mt-20 mr-0 md:mr-2 z-20 hover:shadow-[0_20px_42px_rgba(0,0,0,0.15)]"
+          >
             <div className="flex items-center gap-2 mb-2.5">
               <span className="w-5 h-5 rounded-full bg-[#d2e8dc] text-[#14533c] text-[11px] font-bold flex items-center justify-center shrink-0">
                 4
@@ -163,13 +244,15 @@ export const HeroVisualization: React.FC = () => {
             </div>
 
             {/* Reserve & Pay Button */}
-            <Link
-              to="/workshops"
-              className="w-full py-2.5 px-4 rounded-xl bg-[#0e3c2f] hover:bg-[#08281e] text-white text-xs sm:text-sm font-semibold flex items-center justify-center transition-all shadow-xs text-center mt-1 active:scale-[0.98]"
-            >
-              <span>Reserve & Pay</span>
-            </Link>
-          </div>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+              <Link
+                to={reserveHref}
+                className="nv-btn-press w-full py-2.5 px-4 rounded-xl bg-[#0e3c2f] hover:bg-[#08281e] text-white text-xs sm:text-sm font-semibold flex items-center justify-center transition-all shadow-xs text-center mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e3c2f] focus-visible:ring-offset-2"
+              >
+                <span>Reserve & Pay</span>
+              </Link>
+            </motion.div>
+          </motion.div>
 
         </div>
       </div>

@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../../api/client';
+import React, { useEffect, useState, useCallback } from 'react';
+import { api, useSyncRefresh } from '../../api/client';
 import { ResearchExperiment } from '../../types';
-import { FlaskConical, Play, Loader2, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { FlaskConical, Play, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const ResearchLab: React.FC = () => {
   const [evaluations, setEvaluations] = useState<ResearchExperiment[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const fetchEvaluations = async () => {
-    setLoading(true);
+  const fetchEvaluations = useCallback(async () => {
     try {
       const data = await api.getEvaluations();
       setEvaluations(data);
@@ -18,19 +18,27 @@ export const ResearchLab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchEvaluations();
-  }, []);
+  }, [fetchEvaluations]);
+
+  useSyncRefresh(['clusters', 'demands'], fetchEvaluations);
 
   const handleRunEvaluation = async () => {
+    if (running) return;
     setRunning(true);
+    setFeedback(null);
     try {
       const newRuns = await api.runEvaluation({ baseline: 'all', dataset_size: 60 });
-      fetchEvaluations();
-    } catch (err) {
-      console.error('Evaluation run failed', err);
+      await fetchEvaluations();
+      setFeedback({
+        type: 'success',
+        message: `Empirical benchmark completed: ${Array.isArray(newRuns) ? newRuns.length : 3} comparison runs persisted.`,
+      });
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Benchmark execution failed.' });
     } finally {
       setRunning(false);
     }
@@ -51,14 +59,33 @@ export const ResearchLab: React.FC = () => {
           </div>
 
           <button
+            type="button"
             onClick={handleRunEvaluation}
             disabled={running}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-forest hover:bg-charcoal text-ivory text-xs font-semibold transition-colors shrink-0 shadow-xs"
+            className="nv-btn-press inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-forest hover:bg-charcoal disabled:opacity-60 text-ivory text-xs font-semibold transition-colors shrink-0 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
           >
             {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-            <span>Execute Benchmark Run</span>
+            <span>{running ? 'Running Benchmark...' : 'Execute Benchmark Run'}</span>
           </button>
         </div>
+
+        {feedback && (
+          <div
+            role={feedback.type === 'error' ? 'alert' : 'status'}
+            className={`p-3.5 rounded-xl border text-xs flex items-center gap-2 ${
+              feedback.type === 'error'
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-mint/50 border-forest/20 text-forest font-medium'
+            }`}
+          >
+            {feedback.type === 'error' ? (
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-forest" />
+            )}
+            <span>{feedback.message}</span>
+          </div>
+        )}
 
         {/* Methodology Card */}
         <div className="bg-white rounded-2xl border border-warmgray p-6 space-y-3 shadow-xs">
@@ -141,4 +168,3 @@ export const ResearchLab: React.FC = () => {
     </>
   );
 };
-

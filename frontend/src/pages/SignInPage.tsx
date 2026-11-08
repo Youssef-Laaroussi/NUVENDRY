@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import {
@@ -37,7 +37,9 @@ const PayPalMark: React.FC<{ className?: string }> = ({ className = 'w-[18px] h-
 
 export const SignInPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
+  const redirectParam = searchParams.get('redirect') || '';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,7 +51,9 @@ export const SignInPage: React.FC = () => {
   const [resetNotice, setResetNotice] = useState<string | null>(null);
 
   const routeByRole = (role?: string) => {
-    if (role === 'instructor') {
+    if (redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
+      navigate(redirectParam);
+    } else if (role === 'instructor') {
       navigate('/merchant/overview');
     } else if (role === 'admin') {
       navigate('/admin');
@@ -60,11 +64,20 @@ export const SignInPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || paypalLoading) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your password.');
+      return;
+    }
     setLoading(true);
     setError(null);
     setResetNotice(null);
     try {
-      const data = await api.login({ email, password });
+      const data = await api.login({ email: email.trim(), password });
       login(data.access_token, data);
       routeByRole(data.role);
     } catch (err: any) {
@@ -109,14 +122,14 @@ export const SignInPage: React.FC = () => {
       {/* Elevated Ivory Auth Card */}
       <div className="mt-7 w-full max-w-[420px] bg-[#FCFCFA] rounded-[24px] border border-[#ECEFEA] px-7 py-7 sm:px-8 sm:py-8 shadow-[0_20px_50px_rgba(15,40,28,0.06),0_4px_14px_rgba(15,40,28,0.025)]">
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+          <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
             <span>{error}</span>
           </div>
         )}
 
         {resetNotice && (
-          <div className="mb-4 p-3 bg-[#EAF5EE] border border-[#CBE4D4] text-[#14533C] text-xs rounded-xl flex items-start gap-2">
+          <div role="status" className="mb-4 p-3 bg-[#EAF5EE] border border-[#CBE4D4] text-[#14533C] text-xs rounded-xl flex items-start gap-2">
             <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#186A47]" />
             <span>{resetNotice}</span>
           </div>
@@ -132,7 +145,10 @@ export const SignInPage: React.FC = () => {
               autoComplete="email"
               aria-label="Email address"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError(null);
+              }}
               placeholder="Email address"
               className="w-full h-[48px] pl-11 pr-4 rounded-[12px] bg-[#FBFBF9] border border-[#DFDFE0] text-[14px] text-[#111827] placeholder-[#78827E] transition-all focus:outline-hidden focus:bg-white focus:border-[#166544] focus:ring-3 focus:ring-[#166544]/10"
             />
@@ -147,7 +163,10 @@ export const SignInPage: React.FC = () => {
               autoComplete="current-password"
               aria-label="Password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (error) setError(null);
+              }}
               placeholder="Password"
               className="w-full h-[48px] pl-11 pr-11 rounded-[12px] bg-[#FBFBF9] border border-[#DFDFE0] text-[14px] text-[#111827] placeholder-[#78827E] transition-all focus:outline-hidden focus:bg-white focus:border-[#166544] focus:ring-3 focus:ring-[#166544]/10"
             />
@@ -195,7 +214,7 @@ export const SignInPage: React.FC = () => {
           <button
             type="submit"
             disabled={loading || paypalLoading}
-            className="w-full h-[50px] rounded-[13px] bg-[#115538] hover:bg-[#0C3E28] disabled:opacity-60 text-white font-semibold text-[15px] shadow-[0_6px_18px_rgba(17,85,56,0.22)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="nv-btn-press w-full h-[50px] rounded-[13px] bg-[#115538] hover:bg-[#0C3E28] disabled:opacity-60 text-white font-semibold text-[15px] shadow-[0_6px_18px_rgba(17,85,56,0.22)] transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#115538] focus-visible:ring-offset-2"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -220,7 +239,7 @@ export const SignInPage: React.FC = () => {
           type="button"
           disabled={loading || paypalLoading}
           onClick={handlePayPalSignIn}
-          className="w-full h-[48px] rounded-[13px] bg-[#FBFBF9] hover:bg-white disabled:opacity-60 border border-[#DCDEDC] text-[#111827] font-semibold text-[14px] transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+          className="nv-btn-press w-full h-[48px] rounded-[13px] bg-[#FBFBF9] hover:bg-white disabled:opacity-60 border border-[#DCDEDC] text-[#111827] font-semibold text-[14px] transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#115538] focus-visible:ring-offset-2"
         >
           {paypalLoading ? (
             <Loader2 className="w-4 h-4 animate-spin text-[#003087]" />
@@ -236,7 +255,7 @@ export const SignInPage: React.FC = () => {
         <div className="mt-6 text-center text-[13.5px] text-[#374151]">
           Don’t have an account?{' '}
           <Link
-            to="/sign-up"
+            to={redirectParam ? `/sign-up?redirect=${encodeURIComponent(redirectParam)}` : '/sign-up'}
             className="font-bold text-[#186A47] hover:text-[#0F4930] hover:underline ml-0.5"
           >
             Create account

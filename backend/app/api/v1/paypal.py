@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.config import settings
@@ -190,7 +190,26 @@ async def capture_paypal_order(
             raw_response=capture_resp
         ))
         
-    # 5. Process Post-Payment Rewards, Ledgers & Gifts
+    # 5. Consume Applied Checkout Discounts/Credits & Process Post-Payment Rewards
+    quote_audit_stmt = (
+        select(AuditLog)
+        .where(
+            AuditLog.resource_type == "Reservation",
+            AuditLog.resource_id == reservation.id,
+            AuditLog.action.in_(["RESERVATION_QUOTE_APPLIED", "RESERVATION_INITIATED"])
+        )
+        .order_by(desc(AuditLog.created_at))
+    )
+    quote_audit = (await db.execute(quote_audit_stmt)).scalars().first()
+    saved_quote = (quote_audit.details or {}).get("quote") if quote_audit else None
+    if saved_quote:
+        await reward_engine.consume_rewards_on_payment_success(
+            db=db,
+            user_id=user.id,
+            reservation_id=reservation.id,
+            quote=saved_quote
+        )
+
     await reward_engine.trigger_post_payment_rewards(
         db=db,
         user_id=user.id,

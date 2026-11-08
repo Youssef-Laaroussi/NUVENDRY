@@ -51,3 +51,13 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    bio: Optional[str] = None
+    phone: Optional[str] = None
+    skills_interested: Optional[List[str]] = None
+    business_name: Optional[str] = None
+    merchant_description: Optional[str] = None
+    paypal_receiver_email: Optional[str] = None
+
+

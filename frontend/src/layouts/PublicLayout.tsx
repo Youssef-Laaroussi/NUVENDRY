@@ -17,7 +17,6 @@ export function scrollToSectionById(sectionId: string): boolean {
     behavior: prefersReducedMotion ? 'auto' : 'smooth',
     block: 'start',
   });
-  target.focus({ preventScroll: true });
   return true;
 }
 
@@ -31,65 +30,30 @@ export const PublicLayout: React.FC = () => {
 
     if (location.hash) {
       const rawId = decodeURIComponent(location.hash.replace(/^#/, ''));
-      if (!rawId) return;
-
-      let attempts = 0;
-      let frameId = 0;
-      let cancelledByUser = false;
-
-      const cancelOnUserScroll = () => {
-        cancelledByUser = true;
-      };
-
-      window.addEventListener('wheel', cancelOnUserScroll, { passive: true, once: true });
-      window.addEventListener('touchmove', cancelOnUserScroll, { passive: true, once: true });
-
-      const tryScroll = () => {
-        if (cancelledByUser) return;
-        if (scrollToSectionById(rawId)) {
-          return;
-        }
-        attempts += 1;
-        if (attempts < 20) {
-          frameId = window.requestAnimationFrame(tryScroll);
-        }
-      };
-
-      frameId = window.requestAnimationFrame(tryScroll);
-
-      // Post-settle alignment check in case async workshop cards or cold-cache images shifted height
-      const verifyTimer = window.setTimeout(() => {
-        if (cancelledByUser) return;
-        const target = document.getElementById(rawId);
-        if (target) {
-          const top = target.getBoundingClientRect().top;
-          if (top < 64 || top > 104) {
-            scrollToSectionById(rawId);
+      if (rawId) {
+        let attempts = 0;
+        const interval = window.setInterval(() => {
+          attempts += 1;
+          if (scrollToSectionById(rawId) || attempts >= 10) {
+            window.clearInterval(interval);
           }
-        }
-      }, 800);
+        }, 50);
+        return () => window.clearInterval(interval);
+      }
+    } else {
+      const prefersReducedMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      return () => {
-        window.cancelAnimationFrame(frameId);
-        window.clearTimeout(verifyTimer);
-        window.removeEventListener('wheel', cancelOnUserScroll);
-        window.removeEventListener('touchmove', cancelOnUserScroll);
-      };
+      const samePath = prevPathname === location.pathname;
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: samePath && !prefersReducedMotion ? 'smooth' : 'auto',
+      });
     }
-
-    // No hash: scroll to top cleanly (smooth if staying on same route, instant on route change)
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    const samePath = prevPathname === location.pathname;
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: samePath && !prefersReducedMotion ? 'smooth' : 'auto',
-    });
-  }, [location.pathname, location.hash, location.key]);
+  }, [location.pathname, location.hash]);
 
   // Support direct browser URL-bar hash edits via native hashchange event
   useEffect(() => {

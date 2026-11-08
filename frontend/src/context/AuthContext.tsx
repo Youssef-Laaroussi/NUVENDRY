@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
-import { api } from '../api/client';
+import { api, useSyncRefresh } from '../api/client';
 
 interface AuthContextType {
   user: User | null;
@@ -41,7 +41,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     refreshUser();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'nuvendry_token') {
+        refreshUser();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
+
+  useSyncRefresh(['user'], () => {
+    refreshUser();
+  });
 
   const login = (token: string, userData: any) => {
     localStorage.setItem('nuvendry_token', token);

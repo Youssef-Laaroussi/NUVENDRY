@@ -22,6 +22,7 @@ export const SignUpPage: React.FC = () => {
 
   const initialRole = searchParams.get('role') === 'instructor' ? 'instructor' : 'learner';
   const referralCodeFromUrl = searchParams.get('ref') || '';
+  const redirectParam = searchParams.get('redirect') || '';
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -33,18 +34,34 @@ export const SignUpPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+    if (fullName.trim().length < 2) {
+      setError('Please enter your full name (at least 2 characters).');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
       const data = await api.register({
-        email,
+        email: email.trim(),
         password,
-        full_name: fullName,
+        full_name: fullName.trim(),
         role,
         referral_code: referralCodeFromUrl.trim() || undefined,
       });
       login(data.access_token, data);
-      if (data.role === 'instructor') {
+      if (redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
+        navigate(redirectParam);
+      } else if (data.role === 'instructor') {
         navigate('/merchant/overview');
       } else {
         navigate('/app/overview');
@@ -70,7 +87,7 @@ export const SignUpPage: React.FC = () => {
       {/* Elevated Ivory Auth Card */}
       <div className="mt-7 w-full max-w-[420px] bg-[#FCFCFA] rounded-[24px] border border-[#ECEFEA] px-7 py-7 sm:px-8 sm:py-8 shadow-[0_20px_50px_rgba(15,40,28,0.06),0_4px_14px_rgba(15,40,28,0.025)]">
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+          <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
             <span>{error}</span>
           </div>
@@ -86,7 +103,10 @@ export const SignUpPage: React.FC = () => {
               autoComplete="name"
               aria-label="Full name"
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onChange={(e) => {
+                setFullName(e.target.value);
+                if (error) setError(null);
+              }}
               placeholder="Full name"
               className="w-full h-[48px] pl-11 pr-4 rounded-[12px] bg-[#FBFBF9] border border-[#DFDFE0] text-[14px] text-[#111827] placeholder-[#78827E] transition-all focus:outline-hidden focus:bg-white focus:border-[#166544] focus:ring-3 focus:ring-[#166544]/10"
             />
@@ -101,7 +121,10 @@ export const SignUpPage: React.FC = () => {
               autoComplete="email"
               aria-label="Email address"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError(null);
+              }}
               placeholder="Email address"
               className="w-full h-[48px] pl-11 pr-4 rounded-[12px] bg-[#FBFBF9] border border-[#DFDFE0] text-[14px] text-[#111827] placeholder-[#78827E] transition-all focus:outline-hidden focus:bg-white focus:border-[#166544] focus:ring-3 focus:ring-[#166544]/10"
             />
@@ -116,7 +139,10 @@ export const SignUpPage: React.FC = () => {
               autoComplete="new-password"
               aria-label="Password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (error) setError(null);
+              }}
               placeholder="Password"
               className="w-full h-[48px] pl-11 pr-11 rounded-[12px] bg-[#FBFBF9] border border-[#DFDFE0] text-[14px] text-[#111827] placeholder-[#78827E] transition-all focus:outline-hidden focus:bg-white focus:border-[#166544] focus:ring-3 focus:ring-[#166544]/10"
             />
@@ -175,7 +201,7 @@ export const SignUpPage: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-[50px] rounded-[13px] bg-[#115538] hover:bg-[#0C3E28] disabled:opacity-60 text-white font-semibold text-[15px] shadow-[0_6px_18px_rgba(17,85,56,0.22)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="nv-btn-press w-full h-[50px] rounded-[13px] bg-[#115538] hover:bg-[#0C3E28] disabled:opacity-60 text-white font-semibold text-[15px] shadow-[0_6px_18px_rgba(17,85,56,0.22)] transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#115538] focus-visible:ring-offset-2"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -192,7 +218,7 @@ export const SignUpPage: React.FC = () => {
         <div className="mt-6 text-center text-[13.5px] text-[#374151]">
           Already have an account?{' '}
           <Link
-            to="/sign-in"
+            to={redirectParam ? `/sign-in?redirect=${encodeURIComponent(redirectParam)}` : '/sign-in'}
             className="font-bold text-[#186A47] hover:text-[#0F4930] hover:underline ml-0.5"
           >
             Sign In

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { scrollToSectionById } from '../layouts/PublicLayout';
@@ -30,23 +30,46 @@ export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [activeHashSection, setActiveHashSection] = useState<string>('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close mobile menu and user dropdown on route or hash change
   useEffect(() => {
     setMobileMenuOpen(false);
     setUserDropdownOpen(false);
+    if (location.pathname !== '/') {
+      setActiveHashSection('');
+    }
   }, [location.pathname, location.hash]);
 
-  // Handle elevation on scroll
+  // Handle elevation and active section tracking on scroll
   useEffect(() => {
+    const sectionIds = ['for-instructors', 'rewards', 'ai-demand', 'how-it-works'];
     const handleScroll = () => {
       setScrolled(window.scrollY > 12);
+      if (window.location.pathname !== '/') return;
+      if (window.scrollY < 260) {
+        setActiveHashSection('');
+        return;
+      }
+      let current = '';
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= 160 && rect.bottom > 160) {
+            current = `#${id}`;
+            break;
+          }
+        }
+      }
+      setActiveHashSection(current);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Handle ESC key to close menus
+  // Handle ESC key and outside click to close menus
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -54,8 +77,17 @@ export const Navbar: React.FC = () => {
         setUserDropdownOpen(false);
       }
     };
+    const handlePointerDown = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
   }, []);
 
   const getWorkspacePath = () => {
@@ -73,7 +105,9 @@ export const Navbar: React.FC = () => {
   const isActive = (path: string) => {
     if (path.startsWith('/#')) {
       const targetHash = path.slice(1);
-      return location.pathname === '/' && location.hash === targetHash;
+      if (location.pathname !== '/') return false;
+      if (activeHashSection) return activeHashSection === targetHash;
+      return location.hash === targetHash;
     }
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
@@ -144,11 +178,11 @@ export const Navbar: React.FC = () => {
         {/* Right Section: Authentication Controls */}
         <div className="flex items-center space-x-3">
           {isAuthenticated ? (
-            <div className="relative">
+            <div className="relative" ref={dropdownRef}>
               <div className="flex items-center space-x-2">
                 <Link
                   to={getWorkspacePath()}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0e3c2f] text-white text-xs font-semibold hover:bg-charcoal transition-colors shadow-xs"
+                  className="nv-btn-press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0e3c2f] text-white text-xs font-semibold hover:bg-charcoal transition-colors shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e3c2f] focus-visible:ring-offset-1"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-gold" />
                   <span>{getWorkspaceLabel()}</span>
@@ -157,21 +191,22 @@ export const Navbar: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="p-1.5 rounded-lg border border-warmgray text-charcoal/80 hover:bg-warmgray/50 transition-colors flex items-center gap-1 text-xs"
+                  aria-haspopup="menu"
+                  className="nv-btn-press p-1.5 rounded-lg border border-warmgray text-charcoal/80 hover:bg-warmgray/50 transition-colors flex items-center gap-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e3c2f]"
                   aria-expanded={userDropdownOpen}
                   aria-label="User account menu"
                 >
                   <span className="w-6 h-6 rounded-md bg-mint text-forest font-semibold flex items-center justify-center text-xs">
                     {user?.full_name ? user.full_name[0].toUpperCase() : 'U'}
                   </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-charcoal/50" />
+                  <ChevronDown className={`w-3.5 h-3.5 text-charcoal/50 transition-transform duration-150 ${userDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
               </div>
 
               {/* Accessible Dropdown Menu */}
               {userDropdownOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-warmgray p-1.5 shadow-lg space-y-1 z-50 text-xs text-charcoal"
+                  className="nv-stage-panel absolute right-0 mt-2 w-56 rounded-xl bg-white border border-warmgray p-1.5 shadow-lg space-y-1 z-50 text-xs text-charcoal"
                   role="menu"
                 >
                   <div className="px-3 py-2 border-b border-warmgray/60">
@@ -184,7 +219,7 @@ export const Navbar: React.FC = () => {
                   <Link
                     to={getWorkspacePath()}
                     role="menuitem"
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-charcoal hover:bg-ivory hover:text-forest transition-colors font-medium"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-charcoal hover:bg-ivory hover:text-forest transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
                     onClick={() => setUserDropdownOpen(false)}
                   >
                     <BookOpen className="w-4 h-4 text-forest" />
@@ -194,7 +229,7 @@ export const Navbar: React.FC = () => {
                   <Link
                     to={isInstructor ? '/merchant/settings' : '/app/settings'}
                     role="menuitem"
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-charcoal hover:bg-ivory transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-charcoal hover:bg-ivory transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
                     onClick={() => setUserDropdownOpen(false)}
                   >
                     <User className="w-4 h-4 text-charcoal/50" />
@@ -210,7 +245,7 @@ export const Navbar: React.FC = () => {
                         setUserDropdownOpen(false);
                         navigate('/');
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-charcoal/80 hover:bg-red-50 hover:text-red-700 transition-colors text-left"
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-charcoal/80 hover:bg-red-50 hover:text-red-700 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                     >
                       <LogOut className="w-4 h-4" />
                       <span>Sign Out</span>
@@ -223,16 +258,16 @@ export const Navbar: React.FC = () => {
             <div className="flex items-center space-x-2.5">
               <Link
                 to="/sign-in"
-                className="px-4 py-2 text-xs font-medium text-charcoal bg-white hover:bg-gray-50 rounded-lg border border-gray-300 transition-all shadow-2xs"
+                className="nv-btn-press px-4 py-2 text-xs font-medium text-charcoal bg-white hover:bg-gray-50 rounded-lg border border-gray-300 transition-all shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e3c2f]"
               >
                 Sign In
               </Link>
               <Link
                 to="/sign-up"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-[#0e3c2f] text-white text-xs font-semibold hover:bg-[#0a281f] transition-all shadow-xs"
+                className="nv-btn-press group inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-[#0e3c2f] text-white text-xs font-semibold hover:bg-[#0a281f] transition-all shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e3c2f] focus-visible:ring-offset-1"
               >
                 <span>Get Started</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5 nv-icon-slide" />
               </Link>
             </div>
           )}
@@ -241,7 +276,7 @@ export const Navbar: React.FC = () => {
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg border border-warmgray text-charcoal/80 hover:bg-warmgray/50 transition-colors"
+            className="nv-btn-press md:hidden p-2 rounded-lg border border-warmgray text-charcoal/80 hover:bg-warmgray/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e3c2f]"
             aria-expanded={mobileMenuOpen}
             aria-label="Toggle navigation menu"
           >

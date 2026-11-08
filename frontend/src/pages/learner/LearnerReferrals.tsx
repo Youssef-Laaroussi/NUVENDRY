@@ -1,20 +1,31 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../../api/client';
+import React, { useEffect, useState, useCallback } from 'react';
+import { api, useSyncRefresh } from '../../api/client';
 import { Share2, Copy, Check, Users, DollarSign, ShieldCheck } from 'lucide-react';
 
 export const LearnerReferrals: React.FC = () => {
   const [referralData, setReferralData] = useState<any | null>(null);
   const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await api.getMyReferrals();
+      setReferralData(data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
 
   useEffect(() => {
-    api.getMyReferrals().then(setReferralData).catch(console.error).finally(() => setLoading(false));
-  }, []);
+    load();
+  }, [load]);
+
+  useSyncRefresh(['rewards', 'reservations'], load);
 
   const referralUrl = `${window.location.origin}/sign-up?ref=${referralData?.referral_code || ''}`;
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(referralUrl);
+    if (!referralData?.referral_code) return;
+    navigator.clipboard?.writeText(referralUrl).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -34,19 +45,23 @@ export const LearnerReferrals: React.FC = () => {
 
         {/* Link Share Box */}
         <div className="bg-white rounded-2xl border border-warmgray p-6 sm:p-8 space-y-4 shadow-xs">
-          <label className="text-xs font-semibold text-charcoal uppercase tracking-wider block">
+          <label htmlFor="referral-url-input" className="text-xs font-semibold text-charcoal uppercase tracking-wider block">
             Your Personal Referral Link
           </label>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <input
+              id="referral-url-input"
               type="text"
               readOnly
               value={referralUrl}
-              className="flex-1 p-3 bg-ivory border border-warmgray rounded-xl text-xs font-mono text-charcoal select-all"
+              onClick={(e) => (e.currentTarget as HTMLInputElement).select()}
+              className="flex-1 p-3 bg-ivory border border-warmgray rounded-xl text-xs font-mono text-charcoal select-all focus:outline-hidden focus:ring-2 focus:ring-forest"
             />
             <button
+              type="button"
               onClick={copyToClipboard}
-              className="px-4 py-3 bg-forest hover:bg-charcoal text-ivory text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 shrink-0 shadow-xs"
+              disabled={!referralData?.referral_code}
+              className="nv-btn-press px-4 py-3 bg-forest hover:bg-charcoal disabled:opacity-60 text-ivory text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 shrink-0 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
             >
               {copied ? <Check className="w-4 h-4 text-mint" /> : <Copy className="w-4 h-4" />}
               <span>{copied ? 'Copied to Clipboard' : 'Copy Link'}</span>
@@ -87,8 +102,32 @@ export const LearnerReferrals: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {referralData?.referrals && referralData.referrals.length > 0 && (
+          <div className="bg-white rounded-2xl border border-warmgray p-6 space-y-3 shadow-xs">
+            <h3 className="font-semibold text-sm text-charcoal">Referral Activity</h3>
+            <div className="space-y-2">
+              {referralData.referrals.map((ref: any) => (
+                <div
+                  key={ref.id}
+                  className="p-3 rounded-xl bg-ivory border border-warmgray/60 flex items-center justify-between text-xs"
+                >
+                  <span className="font-mono text-charcoal/70">
+                    Invite #{ref.id.slice(0, 8)} • {new Date(ref.created_at).toLocaleDateString()}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold capitalize ${
+                      ref.status === 'qualified' ? 'bg-mint text-forest' : 'bg-amber-50 text-amber-800'
+                    }`}
+                  >
+                    {ref.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
 };
-

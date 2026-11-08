@@ -7,6 +7,7 @@ export const Footer: React.FC = () => {
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const handleFooterLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
     if (path.startsWith('/#')) {
@@ -23,7 +24,16 @@ export const Footer: React.FC = () => {
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setEmailError('Please enter an email address.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setEmailError('Please enter a valid email address.');
+      return;
+    }
+    setEmailError(null);
     setSubscribed(true);
     setEmail('');
   };
@@ -136,6 +146,7 @@ export const Footer: React.FC = () => {
 
             <form
               onSubmit={handleSubscribe}
+              noValidate
               className="w-full max-w-[385px] flex items-center gap-2 pt-1"
             >
               <div className="relative flex-1">
@@ -143,16 +154,21 @@ export const Footer: React.FC = () => {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError(null);
+                    if (subscribed) setSubscribed(false);
+                  }}
                   placeholder="Enter your email address"
                   aria-label="Email address"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-white border border-[#E2EAE5] text-[12.5px] text-[#111827] placeholder-[#8A948E] shadow-[0_2px_8px_rgba(15,41,30,0.03)] focus:outline-hidden focus:border-[#146C43]"
+                  aria-invalid={!!emailError}
+                  className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-white border border-[#E2EAE5] text-[12.5px] text-[#111827] placeholder-[#8A948E] shadow-[0_2px_8px_rgba(15,41,30,0.03)] focus:outline-none focus:ring-2 focus:ring-[#146C43]/30 focus:border-[#146C43]"
                 />
               </div>
 
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-lg bg-[#125E3B] hover:bg-[#0D462B] text-white text-[11.5px] font-bold uppercase tracking-[0.06em] transition-colors shrink-0 cursor-pointer inline-flex items-center gap-1.5 shadow-2xs"
+                className="nv-btn-press px-5 py-2.5 rounded-lg bg-[#125E3B] hover:bg-[#0D462B] text-white text-[11.5px] font-bold uppercase tracking-[0.06em] transition-colors shrink-0 cursor-pointer inline-flex items-center gap-1.5 shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#125E3B] focus-visible:ring-offset-1"
               >
                 {subscribed ? (
                   <>
@@ -165,7 +181,15 @@ export const Footer: React.FC = () => {
               </button>
             </form>
 
-            <span className="text-[11px] text-[#6B7280]">We respect your privacy.</span>
+            {emailError ? (
+              <span role="alert" className="text-[11px] text-red-700 font-medium">
+                {emailError}
+              </span>
+            ) : (
+              <span aria-live="polite" className="text-[11px] text-[#6B7280]">
+                {subscribed ? 'Subscribed to marketplace updates.' : 'We respect your privacy.'}
+              </span>
+            )}
           </div>
 
           {/* Right Vertical Divider */}

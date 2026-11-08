@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { api } from '../api/client';
-import { ShieldCheck, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
 
 interface PayPalCheckoutButtonProps {
   reservationId: string;
   finalAmountCents: number;
   currency: string;
   workshopTitle: string;
+  disabled?: boolean;
+  onProcessingChange?: (processing: boolean) => void;
   onSuccess: (captureData: any) => void;
   onError?: (err: any) => void;
 }
@@ -15,59 +17,84 @@ export const PayPalCheckoutButton: React.FC<PayPalCheckoutButtonProps> = ({
   reservationId,
   finalAmountCents,
   currency,
-  workshopTitle,
+  disabled = false,
+  onProcessingChange,
   onSuccess,
   onError,
 }) => {
   const [loading, setLoading] = useState(false);
+  const [stageLabel, setStageLabel] = useState<string>('Authorizing PayPal Sandbox Order...');
   const [error, setError] = useState<string | null>(null);
-  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const busyRef = useRef(false);
 
   const handleInitiateAndCapture = async () => {
+    if (busyRef.current || loading || disabled) return;
+    busyRef.current = true;
     setLoading(true);
+    onProcessingChange?.(true);
     setError(null);
-    try {
-      // 1. Create official PayPal Sandbox order v2 via server
-      const orderResp = await api.createPayPalOrder(reservationId);
-      const orderId = orderResp.paypal_order_id;
-      setCreatedOrderId(orderId);
 
-      // 2. Authoritative Capture via server
+    try {
+      // Reconcile existing uncaptured order ID if a previous capture attempt was interrupted
+      let orderId = pendingOrderId;
+      if (!orderId) {
+        setStageLabel('Creating PayPal Sandbox Order v2...');
+        const orderResp = await api.createPayPalOrder(reservationId);
+        orderId = orderResp.paypal_order_id;
+        setPendingOrderId(orderId);
+      }
+
+      if (!orderId) {
+        throw new Error('PayPal Sandbox did not return a valid order ID.');
+      }
+
+      setStageLabel('Verifying PayPal Sandbox Capture...');
       const captureResp = await api.capturePayPalOrder(orderId);
+      setPendingOrderId(null);
       onSuccess(captureResp);
     } catch (err: any) {
       console.error('PayPal checkout error:', err);
-      const msg = err.message || 'Payment capture failed. Please retry.';
+      const msg = err.message || 'Payment capture failed. Your card/account was not charged.';
       setError(msg);
       if (onError) onError(err);
     } finally {
+      busyRef.current = false;
       setLoading(false);
+      onProcessingChange?.(false);
     }
   };
 
   return (
     <div className="w-full space-y-3">
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+        <div
+          role="alert"
+          className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-start gap-2"
+        >
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
 
       <button
+        type="button"
         onClick={handleInitiateAndCapture}
-        disabled={loading}
-        className="w-full py-3 px-4 bg-[#0070BA] hover:bg-[#003087] disabled:opacity-60 text-white font-medium text-sm rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99]"
+        disabled={loading || disabled}
+        className="nv-btn-press w-full py-3 px-4 bg-[#0070BA] hover:bg-[#003087] disabled:opacity-60 text-white font-medium text-sm rounded-xl flex items-center justify-center gap-2 transition-all shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0070BA] focus-visible:ring-offset-2"
       >
         {loading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Authorizing PayPal Sandbox Capture...</span>
+            <span>{stageLabel}</span>
           </>
         ) : (
           <>
             <span className="font-bold italic text-base tracking-tight">PayPal</span>
-            <span>Pay ${(finalAmountCents / 100).toFixed(2)} {currency} (Sandbox)</span>
+            <span>
+              {pendingOrderId ? 'Verify & Complete' : 'Pay'} ${(finalAmountCents / 100).toFixed(2)}{' '}
+              {currency} (Sandbox)
+            </span>
           </>
         )}
       </button>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { HeroVisualization } from '../components/HeroVisualization';
 import { DemandToCommerceJourney } from '../components/DemandToCommerceJourney';
@@ -8,7 +8,7 @@ import { DemandIntelligencePreview } from '../components/DemandIntelligencePrevi
 import { RewardsShowcase } from '../components/RewardsShowcase';
 import { InstructorStudioPreview } from '../components/InstructorStudioPreview';
 import { FinalCtaSection } from '../components/FinalCtaSection';
-import { api } from '../api/client';
+import { api, useSyncRefresh } from '../api/client';
 import { Workshop, DemandCluster } from '../types';
 import { Sparkles, ArrowRight, ShieldCheck, Tag, CheckCircle2 } from 'lucide-react';
 
@@ -16,24 +16,31 @@ export const LandingPage: React.FC = () => {
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [clusters, setClusters] = useState<DemandCluster[]>([]);
   const [loading, setLoading] = useState(true);
+  const [externalJourneyStage, setExternalJourneyStage] = useState<{
+    stage: 1 | 2 | 3 | 4;
+    seq: number;
+  } | null>(null);
+
+  const loadData = useCallback(async () => {
+    try {
+      const [wsData, clusterData] = await Promise.all([
+        api.getWorkshops(),
+        api.getClusters()
+      ]);
+      setWorkshops(wsData);
+      setClusters(clusterData);
+    } catch (err) {
+      console.error('Error fetching landing page data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [wsData, clusterData] = await Promise.all([
-          api.getWorkshops(),
-          api.getClusters()
-        ]);
-        setWorkshops(wsData);
-        setClusters(clusterData);
-      } catch (err) {
-        console.error('Error fetching landing page data:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
     loadData();
-  }, []);
+  }, [loadData]);
+
+  useSyncRefresh(['workshops', 'clusters'], loadData);
 
   return (
     <div className="bg-ivory text-charcoal">
@@ -70,14 +77,14 @@ export const LandingPage: React.FC = () => {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
                 <Link
                   to="/workshops"
-                  className="px-6 py-3 rounded-lg bg-[#0e3c2f] hover:bg-[#08281e] text-white font-medium text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center gap-2 group"
+                  className="nv-btn-press px-6 py-3 rounded-lg bg-[#0e3c2f] hover:bg-[#08281e] text-white font-medium text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center gap-2 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e3c2f] focus-visible:ring-offset-2"
                 >
                   <span>Explore Workshops</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link
                   to="/demand"
-                  className="px-6 py-3 rounded-lg bg-white border border-gray-300 text-[#111827] font-medium text-xs sm:text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 shadow-2xs"
+                  className="nv-btn-press px-6 py-3 rounded-lg bg-white border border-gray-300 text-[#111827] font-medium text-xs sm:text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e3c2f]"
                 >
                   <span>Request a Workshop</span>
                 </Link>
@@ -102,7 +109,10 @@ export const LandingPage: React.FC = () => {
 
             {/* Right Column: Hero Visual Assembly */}
             <div className="lg:col-span-6">
-              <HeroVisualization />
+              <HeroVisualization
+                workshops={workshops}
+                onSelectStage={(stage) => setExternalJourneyStage({ stage, seq: Date.now() })}
+              />
             </div>
           </div>
         </div>
@@ -111,7 +121,11 @@ export const LandingPage: React.FC = () => {
       {/* ========================================================= */}
       {/* 2. AFTER HERO · CORE DIFFERENTIATION                      */}
       {/* ========================================================= */}
-      <DemandToCommerceJourney clusters={clusters} workshops={workshops} />
+      <DemandToCommerceJourney
+        clusters={clusters}
+        workshops={workshops}
+        externalStage={externalJourneyStage}
+      />
 
       {/* ========================================================= */}
       {/* 3. THE LIFECYCLE — HOW NUVENDRY WORKS                     */}
@@ -266,7 +280,7 @@ export const LandingPage: React.FC = () => {
       {/* ========================================================= */}
       {/* 6. SECTION 06 · SIX REAL REWARD MECHANISMS                */}
       {/* ========================================================= */}
-      <RewardsShowcase />
+      <RewardsShowcase workshops={workshops} />
 
       {/* ========================================================= */}
       {/* 7. SECTION 07 · FINAL CTA + INSTRUCTOR DEMAND FEED        */}

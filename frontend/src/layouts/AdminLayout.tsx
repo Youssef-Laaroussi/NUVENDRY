@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -18,7 +18,22 @@ export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileMenuOpen]);
+
   const getPageTitle = () => {
+    if (location.pathname === '/admin/payments') return 'Payment Audit';
+    if (location.pathname === '/admin/content') return 'Content Governance';
     const active = ADMIN_NAV.find((item) => item.path === location.pathname);
     return active ? active.name : 'Administrator Workspace';
   };
@@ -113,7 +128,8 @@ export const AdminLayout: React.FC = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest ${
                   isActive
                     ? 'bg-mint text-forest font-semibold shadow-xs'
                     : 'text-charcoal/70 hover:bg-ivory hover:text-charcoal'

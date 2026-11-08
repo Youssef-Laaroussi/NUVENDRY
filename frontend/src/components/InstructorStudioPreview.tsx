@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   Users,
   ArrowRight,
@@ -32,12 +33,33 @@ const AscendingBarsIcon: React.FC<{ className?: string }> = ({ className = 'w-5 
 
 export const InstructorStudioPreview: React.FC = () => {
   const { user } = useAuth();
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('nv_saved_opp_pm') === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSaved = () => {
+    setSaved((prev) => {
+      const next = !prev;
+      try {
+        if (next) sessionStorage.setItem('nv_saved_opp_pm', '1');
+        else sessionStorage.removeItem('nv_saved_opp_pm');
+      } catch {
+        // Ignore storage errors
+      }
+      return next;
+    });
+  };
 
   const topicsHref =
     user?.role === 'instructor' ? '/merchant/demand-intelligence' : '/demand';
   const createWorkshopHref =
-    user?.role === 'instructor' ? '/merchant/offer-studio' : '/sign-up';
+    user?.role === 'instructor'
+      ? '/merchant/offer-studio?topic=AI%20for%20Product%20Managers'
+      : '/sign-up';
 
   return (
     <section
@@ -72,15 +94,15 @@ export const InstructorStudioPreview: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3.5 pt-2">
               <Link
                 to={topicsHref}
-                className="px-6 py-3.5 rounded-[12px] bg-[#167347] hover:bg-[#115C38] text-white text-[14px] font-semibold inline-flex items-center justify-center gap-2.5 shadow-[0_6px_18px_rgba(22,115,71,0.22)] transition-all group"
+                className="nv-btn-press px-6 py-3.5 rounded-[12px] bg-[#167347] hover:bg-[#115C38] text-white text-[14px] font-semibold inline-flex items-center justify-center gap-2.5 shadow-[0_6px_18px_rgba(22,115,71,0.22)] transition-all group"
               >
                 <span>Find In-Demand Topics</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                <ArrowRight className="w-4 h-4 nv-icon-slide" />
               </Link>
 
               <Link
                 to={createWorkshopHref}
-                className="px-7 py-3.5 rounded-[12px] bg-white hover:bg-[#F5F8F6] text-[#111827] border border-[#E2EAE5] text-[14px] font-bold inline-flex items-center justify-center shadow-[0_4px_14px_rgba(15,41,30,0.06)] transition-all"
+                className="nv-btn-press px-7 py-3.5 rounded-[12px] bg-white hover:bg-[#F5F8F6] text-[#111827] border border-[#E2EAE5] text-[14px] font-bold inline-flex items-center justify-center shadow-[0_4px_14px_rgba(15,41,30,0.06)] transition-all"
               >
                 <span>Create a Workshop</span>
               </Link>
@@ -176,7 +198,14 @@ export const InstructorStudioPreview: React.FC = () => {
                     </div>
 
                     <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#F1FAF4] border border-[#DCECE2] shadow-[0_3px_10px_rgba(15,41,30,0.08)] text-[#14533C] text-[12px] font-bold shrink-0">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#198754]" />
+                      <span className="relative flex h-2.5 w-2.5">
+                        <motion.span
+                          animate={{ scale: [1, 2.2, 1], opacity: [0.75, 0, 0.75] }}
+                          transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+                          className="absolute inline-flex h-full w-full rounded-full bg-[#198754]"
+                        />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#198754]" />
+                      </span>
                       <span>Live</span>
                     </span>
                   </div>
@@ -250,18 +279,22 @@ export const InstructorStudioPreview: React.FC = () => {
 
                   {/* Card Action Footer */}
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <Link
-                      to={createWorkshopHref}
-                      className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-b from-[#19804D] to-[#13683E] hover:from-[#156F43] hover:to-[#0E5432] text-white text-[12.5px] font-semibold inline-flex items-center justify-center gap-2 transition-all shadow-[0_5px_14px_rgba(19,104,62,0.26)] whitespace-nowrap"
-                    >
-                      <span>Create Workshop for This Topic</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
+                    <motion.div whileTap={{ scale: 0.98 }} className="flex-1 flex">
+                      <Link
+                        to={createWorkshopHref}
+                        className="nv-btn-press w-full py-3 px-4 rounded-xl bg-gradient-to-b from-[#19804D] to-[#13683E] hover:from-[#156F43] hover:to-[#0E5432] text-white text-[12.5px] font-semibold inline-flex items-center justify-center gap-2 transition-all shadow-[0_5px_14px_rgba(19,104,62,0.26)] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#13683E]"
+                      >
+                        <span>Create Workshop for This Topic</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </motion.div>
 
-                    <button
+                    <motion.button
                       type="button"
-                      onClick={() => setSaved((prev) => !prev)}
-                      className={`py-3 px-4 rounded-xl border text-[12.5px] font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap shadow-[0_3px_10px_rgba(15,41,30,0.06)] ${
+                      aria-pressed={saved}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={toggleSaved}
+                      className={`nv-btn-press py-3 px-4 rounded-xl border text-[12.5px] font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap shadow-[0_3px_10px_rgba(15,41,30,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14533C] ${
                         saved
                           ? 'bg-[#E6F4EC] border-[#BFE0CD] text-[#14533C]'
                           : 'bg-white hover:bg-[#F7FAF8] border-[#E2EAE5] text-[#111827]'
@@ -273,7 +306,7 @@ export const InstructorStudioPreview: React.FC = () => {
                         }`}
                       />
                       <span>{saved ? 'Opportunity Saved' : 'Save Opportunity'}</span>
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
               </div>
@@ -287,7 +320,10 @@ export const InstructorStudioPreview: React.FC = () => {
         <div className="mt-14 pt-10 border-t border-[#E5ECE7]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-0 md:divide-x md:divide-[#E5ECE7]">
             {/* Pillar 1 */}
-            <div className="flex items-start gap-4 md:pr-8">
+            <motion.div
+              whileHover={{ y: -3, transition: { type: 'spring', stiffness: 400, damping: 25 } }}
+              className="flex items-start gap-4 md:pr-8"
+            >
               <div className="w-11 h-11 rounded-xl bg-[#EAF6EF] text-[#167347] flex items-center justify-center shrink-0 mt-0.5">
                 <Zap className="w-5 h-5 stroke-[1.9]" />
               </div>
@@ -299,10 +335,13 @@ export const InstructorStudioPreview: React.FC = () => {
                   Discover topics learners are actively searching for right now.
                 </p>
               </div>
-            </div>
+            </motion.div>
 
             {/* Pillar 2 */}
-            <div className="flex items-start gap-4 md:px-8">
+            <motion.div
+              whileHover={{ y: -3, transition: { type: 'spring', stiffness: 400, damping: 25 } }}
+              className="flex items-start gap-4 md:px-8"
+            >
               <div className="w-11 h-11 rounded-xl bg-[#EAF6EF] text-[#167347] flex items-center justify-center shrink-0 mt-0.5">
                 <Layers className="w-5 h-5 stroke-[1.9]" />
               </div>
@@ -314,10 +353,13 @@ export const InstructorStudioPreview: React.FC = () => {
                   Build workshops backed by real interest and growing demand.
                 </p>
               </div>
-            </div>
+            </motion.div>
 
             {/* Pillar 3 */}
-            <div className="flex items-start gap-4 md:pl-8">
+            <motion.div
+              whileHover={{ y: -3, transition: { type: 'spring', stiffness: 400, damping: 25 } }}
+              className="flex items-start gap-4 md:pl-8"
+            >
               <div className="w-11 h-11 rounded-xl bg-[#EAF6EF] text-[#167347] flex items-center justify-center shrink-0 mt-0.5">
                 <AscendingBarsIcon className="w-5 h-5" />
               </div>
@@ -329,7 +371,7 @@ export const InstructorStudioPreview: React.FC = () => {
                   Publish, reach ready learners, and earn with every enrollment.
                 </p>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>

@@ -229,7 +229,11 @@ async def list_merchant_reservations(
     stmt = (
         select(Reservation)
         .join(Workshop, Reservation.workshop_id == Workshop.id)
-        .options(selectinload(Reservation.user), selectinload(Reservation.workshop))
+        .options(
+            selectinload(Reservation.user),
+            selectinload(Reservation.workshop),
+            selectinload(Reservation.attendance)
+        )
         .where(Workshop.merchant_id == user.merchant_profile.id)
         .order_by(desc(Reservation.created_at))
     )
@@ -246,6 +250,7 @@ async def list_merchant_reservations(
             "amount_cents": r.final_amount_cents,
             "currency": r.currency,
             "status": r.status,
+            "attended": bool(r.attendance and r.attendance.attended),
             "paypal_order_id": r.paypal_order_id,
             "paypal_capture_id": r.paypal_capture_id,
             "created_at": r.created_at,

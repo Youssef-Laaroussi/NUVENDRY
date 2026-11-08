@@ -6,8 +6,8 @@ from sqlalchemy import select
 from app.core.database import get_db
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.core.config import settings
-from app.models.entities import User, UserProfile, MerchantProfile, ReferralEvent, StoreCredit, AuditLog
-from app.schemas.auth import UserRegister, UserLogin, Token, UserResponse
+from app.models.entities import User, UserProfile, MerchantProfile, ReferralEvent, StoreCredit, AuditLog, Notification
+from app.schemas.auth import UserRegister, UserLogin, Token, UserResponse, UserProfileUpdate
 from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -149,3 +149,93 @@ async def get_me(user: User = Depends(get_current_user), db: AsyncSession = Depe
 @router.post("/logout")
 async def logout():
     return {"message": "Successfully logged out."}
+
+@router.patch("/me", response_model=UserResponse)
+async def update_me(
+    req: UserProfileUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(User)
+        .options(selectinload(User.profile), selectinload(User.merchant_profile))
+        .where(User.id == user.id)
+    )
+    u = (await db.execute(stmt)).scalar_one()
+
+    if req.full_name is not None and req.full_name.strip():
+        u.full_name = req.full_name.strip()
+
+    if not u.profile:
+        u.profile = UserProfile(user_id=u.id, skills_interested=[])
+        db.add(u.profile)
+
+    if req.bio is not None:
+        u.profile.bio = req.bio
+    if req.phone is not None:
+        u.profile.phone = req.phone
+    if req.skills_interested is not None:
+        u.profile.skills_interested = req.skills_interested
+
+    if u.merchant_profile:
+        if req.business_name is not None and req.business_name.strip():
+            u.merchant_profile.business_name = req.business_name.strip()
+        if req.merchant_description is not None:
+            u.merchant_profile.description = req.merchant_description
+        if req.paypal_receiver_email is not None and req.paypal_receiver_email.strip():
+            u.merchant_profile.paypal_receiver_email = req.paypal_receiver_email.strip()
+
+    db.add(AuditLog(
+        user_id=u.id,
+        action="USER_PROFILE_UPDATED",
+        resource_type="User",
+        resource_id=u.id,
+        details={"full_name": u.full_name}
+    ))
+    await db.commit()
+
+    refreshed = (await db.execute(stmt)).scalar_one()
+    return refreshed
+
+@router.get("/notifications")
+async def list_my_notifications(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    from sqlalchemy import desc
+    stmt = (
+        select(Notification)
+        .where(Notification.user_id == user.id)
+        .order_by(desc(Notification.created_at))
+        .limit(30)
+    )
+    items = (await db.execute(stmt)).scalars().all()
+    return [
+        {
+            "id": n.id,
+            "title": n.title,
+            "message": n.message,
+            "link": n.link,
+            "is_read": n.is_read,
+            "created_at": n.created_at,
+        }
+        for n in items
+    ]
+
+@router.post("/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Notification).where(
+        Notification.id == notification_id,
+        Notification.user_id == user.id
+    )
+    notif = (await db.execute(stmt)).scalar_one_or_none()
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notification not found.")
+    notif.is_read = True
+    await db.commit()
+    return {"id": notif.id, "is_read": True}
+

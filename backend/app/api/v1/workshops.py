@@ -4,8 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 from app.core.database import get_db
-from app.models.entities import Workshop, MerchantProfile
+from app.models.entities import Workshop, MerchantProfile, Reservation, DigitalGift, User
 from app.schemas.workshop import WorkshopResponse
+from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/workshops", tags=["Public Workshops Marketplace"])
 
@@ -91,4 +92,48 @@ async def get_workshop(workshop_id: str, db: AsyncSession = Depends(get_db)):
         created_at=w.created_at,
         merchant_name=merchant_name
     )
+
+@router.get("/{workshop_id}/materials")
+async def get_workshop_materials(
+    workshop_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(Workshop)
+        .options(selectinload(Workshop.merchant))
+        .where(Workshop.id == workshop_id)
+    )
+    w = (await db.execute(stmt)).scalar_one_or_none()
+    if not w:
+        raise HTTPException(status_code=404, detail="Workshop not found.")
+
+    res_stmt = select(Reservation).where(
+        Reservation.workshop_id == workshop_id,
+        Reservation.user_id == user.id,
+        Reservation.status == "confirmed"
+    )
+    confirmed_res = (await db.execute(res_stmt)).scalars().first()
+    gift_stmt = select(DigitalGift).where(
+        DigitalGift.user_id == user.id,
+        DigitalGift.download_url.like(f"%{workshop_id}%")
+    )
+    gift = (await db.execute(gift_stmt)).scalars().first()
+
+    if not confirmed_res and not gift and user.role != "admin":
+        raise HTTPException(status_code=403, detail="Materials require a confirmed workshop reservation.")
+
+    return {
+        "workshop_id": w.id,
+        "workshop_title": w.title,
+        "instructor": w.merchant.business_name if w.merchant else "Verified Instructor",
+        "access_code": gift.access_code if gift else f"NV-KIT-{w.id[:8].upper()}",
+        "deliverables": [
+            f"Starter repository & environment setup for {w.title}",
+            "Architecture diagrams, prompt templates & evaluation harness",
+            "Live lab instructions and dataset configuration",
+            "Post-session reference implementation & checklist"
+        ]
+    }
+
 

@@ -1,4 +1,92 @@
+import { useEffect, useRef } from 'react';
+
 const API_BASE = '/api/v1';
+
+export type SyncDomain =
+  | 'demands'
+  | 'clusters'
+  | 'workshops'
+  | 'reservations'
+  | 'rewards'
+  | 'analytics'
+  | 'payments'
+  | 'evaluations'
+  | 'notifications'
+  | 'user'
+  | 'admin';
+
+type SyncListener = () => void;
+const syncListeners = new Map<SyncDomain, Set<SyncListener>>();
+let syncChannel: BroadcastChannel | null = null;
+
+if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+  try {
+    syncChannel = new BroadcastChannel('nuvendry_state_sync');
+    syncChannel.onmessage = (event) => {
+      const domains = event.data?.domains as SyncDomain[] | undefined;
+      if (Array.isArray(domains)) {
+        notifyLocalListeners(domains);
+      }
+    };
+  } catch {
+    syncChannel = null;
+  }
+}
+
+function notifyLocalListeners(domains: SyncDomain[]) {
+  const triggered = new Set<SyncListener>();
+  for (const domain of domains) {
+    const set = syncListeners.get(domain);
+    if (set) {
+      set.forEach((cb) => triggered.add(cb));
+    }
+  }
+  triggered.forEach((cb) => {
+    try {
+      cb();
+    } catch {
+      // Ignore listener errors to protect other subscribers
+    }
+  });
+}
+
+export function emitSync(domains: SyncDomain[]) {
+  notifyLocalListeners(domains);
+  if (syncChannel) {
+    try {
+      syncChannel.postMessage({ domains, ts: Date.now() });
+    } catch {
+      // Ignore broadcast errors
+    }
+  }
+}
+
+export function subscribeSync(domains: SyncDomain[], listener: SyncListener): () => void {
+  for (const domain of domains) {
+    if (!syncListeners.has(domain)) {
+      syncListeners.set(domain, new Set());
+    }
+    syncListeners.get(domain)!.add(listener);
+  }
+  return () => {
+    for (const domain of domains) {
+      syncListeners.get(domain)?.delete(listener);
+    }
+  };
+}
+
+export function useSyncRefresh(domains: SyncDomain[], onRefresh: () => void) {
+  const callbackRef = useRef(onRefresh);
+  callbackRef.current = onRefresh;
+  const domainKey = domains.join(',');
+
+  useEffect(() => {
+    const domainList = domainKey.split(',').filter(Boolean) as SyncDomain[];
+    return subscribeSync(domainList, () => {
+      callbackRef.current();
+    });
+  }, [domainKey]);
+}
 
 export class ApiError extends Error {
   status: number;
@@ -10,52 +98,99 @@ export class ApiError extends Error {
   }
 }
 
+const inFlightMutations = new Map<string, Promise<any>>();
+
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = localStorage.getItem('nuvendry_token');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string> || {}),
+  const method = (options.method || 'GET').toUpperCase();
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+  const isMutation = method !== 'GET' && method !== 'HEAD';
+  const mutationKey = isMutation ? `${method}:${url}:${typeof options.body === 'string' ? options.body : ''}` : '';
+
+  if (isMutation && inFlightMutations.has(mutationKey)) {
+    return inFlightMutations.get(mutationKey) as Promise<T>;
+  }
+
+  const execute = async (): Promise<T> => {
+    const token = localStorage.getItem('nuvendry_token');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string> || {}),
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (response.status === 204) {
+      return {} as T;
+    }
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const detail = data?.detail;
+      const errorMsg =
+        typeof detail === 'string'
+          ? detail
+          : Array.isArray(detail) && detail[0]?.msg
+            ? detail[0].msg
+            : `API Request Failed with status ${response.status}`;
+      throw new ApiError(errorMsg, response.status, data);
+    }
+
+    return data as T;
   };
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (!isMutation) {
+    return execute();
   }
 
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
-  const response = await fetch(url, {
-    ...options,
-    headers,
+  const promise = execute().finally(() => {
+    inFlightMutations.delete(mutationKey);
   });
-
-  if (response.status === 204) {
-    return {} as T;
-  }
-
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    const errorMsg = data?.detail || `API Request Failed with status ${response.status}`;
-    throw new ApiError(errorMsg, response.status, data);
-  }
-
-  return data as T;
+  inFlightMutations.set(mutationKey, promise);
+  return promise;
 }
 
 export const api = {
-  // Auth
-  register: (payload: any) => apiRequest<any>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+  // Auth & Profile
+  register: async (payload: any) => {
+    const res = await apiRequest<any>('/auth/register', { method: 'POST', body: JSON.stringify(payload) });
+    emitSync(['user', 'admin']);
+    return res;
+  },
   login: (payload: any) => apiRequest<any>('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   getMe: () => apiRequest<any>('/auth/me'),
+  updateProfile: async (payload: any) => {
+    const res = await apiRequest<any>('/auth/me', { method: 'PATCH', body: JSON.stringify(payload) });
+    emitSync(['user']);
+    return res;
+  },
+  getNotifications: () => apiRequest<any[]>('/auth/notifications'),
+  markNotificationRead: async (notificationId: string) => {
+    const res = await apiRequest<any>(`/auth/notifications/${notificationId}/read`, { method: 'POST' });
+    emitSync(['notifications']);
+    return res;
+  },
   logout: () => {
     localStorage.removeItem('nuvendry_token');
     return apiRequest<any>('/auth/logout', { method: 'POST' });
   },
 
   // Demands
-  createDemand: (payload: any) => apiRequest<any>('/demands', { method: 'POST', body: JSON.stringify(payload) }),
+  createDemand: async (payload: any) => {
+    const res = await apiRequest<any>('/demands', { method: 'POST', body: JSON.stringify(payload) });
+    emitSync(['demands', 'clusters', 'analytics']);
+    return res;
+  },
   getDemands: (params: { mine_only?: boolean; topic?: string } = {}) => {
     const query = new URLSearchParams();
     if (params.mine_only) query.set('mine_only', 'true');
@@ -63,43 +198,98 @@ export const api = {
     return apiRequest<any[]>(`/demands?${query.toString()}`);
   },
   getDemand: (id: string) => apiRequest<any>(`/demands/${id}`),
-  updateDemand: (id: string, payload: any) => apiRequest<any>(`/demands/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
-  deleteDemand: (id: string) => apiRequest<void>(`/demands/${id}`, { method: 'DELETE' }),
+  updateDemand: async (id: string, payload: any) => {
+    const res = await apiRequest<any>(`/demands/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+    emitSync(['demands', 'clusters', 'analytics']);
+    return res;
+  },
+  deleteDemand: async (id: string) => {
+    await apiRequest<void>(`/demands/${id}`, { method: 'DELETE' });
+    emitSync(['demands', 'clusters', 'analytics']);
+  },
 
   // AI & Clusters
   extractDemand: (raw_prompt: string) => apiRequest<any>(`/ai/extract-demand?raw_prompt=${encodeURIComponent(raw_prompt)}`, { method: 'POST' }),
   getClusters: () => apiRequest<any[]>('/ai/clusters'),
   getCluster: (id: string) => apiRequest<any>(`/ai/clusters/${id}`),
-  matchDemands: () => apiRequest<any[]>('/ai/match-demands', { method: 'POST' }),
-  generateOffer: (cluster_id: string) => apiRequest<any>(`/ai/generate-offer?cluster_id=${cluster_id}`, { method: 'POST' }),
+  matchDemands: async () => {
+    const res = await apiRequest<any[]>('/ai/match-demands', { method: 'POST' });
+    emitSync(['clusters', 'demands', 'analytics']);
+    return res;
+  },
+  generateOffer: async (cluster_id: string) => {
+    const res = await apiRequest<any>(`/ai/generate-offer?cluster_id=${encodeURIComponent(cluster_id)}`, { method: 'POST' });
+    emitSync(['clusters']);
+    return res;
+  },
+  getRecommendations: () => apiRequest<any[]>('/ai/recommendations'),
 
   // Workshops
-  getWorkshops: (params: { category?: string; search?: string } = {}) => {
+  getWorkshops: (params: { category?: string; difficulty?: string; search?: string } = {}) => {
     const query = new URLSearchParams();
     if (params.category) query.set('category', params.category);
+    if (params.difficulty) query.set('difficulty', params.difficulty);
     if (params.search) query.set('search', params.search);
     return apiRequest<any[]>(`/workshops?${query.toString()}`);
   },
   getWorkshop: (id: string) => apiRequest<any>(`/workshops/${id}`),
+  getWorkshopMaterials: (id: string) => apiRequest<any>(`/workshops/${id}/materials`),
 
   // Merchant
-  createWorkshop: (payload: any) => apiRequest<any>('/merchant/workshops', { method: 'POST', body: JSON.stringify(payload) }),
-  updateWorkshop: (id: string, payload: any) => apiRequest<any>(`/merchant/workshops/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
-  publishWorkshop: (id: string) => apiRequest<any>(`/merchant/workshops/${id}/publish`, { method: 'POST' }),
+  createWorkshop: async (payload: any) => {
+    const res = await apiRequest<any>('/merchant/workshops', { method: 'POST', body: JSON.stringify(payload) });
+    emitSync(['workshops', 'analytics']);
+    return res;
+  },
+  updateWorkshop: async (id: string, payload: any) => {
+    const res = await apiRequest<any>(`/merchant/workshops/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+    emitSync(['workshops', 'analytics']);
+    return res;
+  },
+  publishWorkshop: async (id: string) => {
+    const res = await apiRequest<any>(`/merchant/workshops/${id}/publish`, { method: 'POST' });
+    emitSync(['workshops', 'analytics', 'clusters']);
+    return res;
+  },
   getMerchantWorkshops: () => apiRequest<any[]>('/merchant/workshops'),
   getMerchantReservations: () => apiRequest<any[]>('/merchant/reservations'),
-  markAttendance: (reservation_id: string, attended: boolean) => 
-    apiRequest<any>(`/merchant/reservations/${reservation_id}/attendance?attended=${attended}`, { method: 'POST' }),
+  markAttendance: async (reservation_id: string, attended: boolean) => {
+    const res = await apiRequest<any>(`/merchant/reservations/${reservation_id}/attendance?attended=${attended}`, { method: 'POST' });
+    emitSync(['reservations', 'rewards', 'analytics']);
+    return res;
+  },
   getMerchantRewards: () => apiRequest<any[]>('/merchant/rewards'),
-  createMerchantReward: (payload: any) => apiRequest<any>('/merchant/rewards', { method: 'POST', body: JSON.stringify(payload) }),
+  createMerchantReward: async (payload: any) => {
+    const res = await apiRequest<any>('/merchant/rewards', { method: 'POST', body: JSON.stringify(payload) });
+    emitSync(['rewards', 'analytics']);
+    return res;
+  },
+  updateMerchantReward: async (id: string, payload: any) => {
+    const res = await apiRequest<any>(`/merchant/rewards/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+    emitSync(['rewards', 'analytics']);
+    return res;
+  },
 
   // Reservations & PayPal
   getQuote: (payload: any) => apiRequest<any>('/reservations/quote', { method: 'POST', body: JSON.stringify(payload) }),
-  createReservation: (payload: any) => apiRequest<any>('/reservations', { method: 'POST', body: JSON.stringify(payload) }),
+  createReservation: async (payload: any) => {
+    const res = await apiRequest<any>('/reservations', { method: 'POST', body: JSON.stringify(payload) });
+    emitSync(['reservations', 'workshops', 'analytics']);
+    return res;
+  },
+  cancelReservation: async (reservation_id: string) => {
+    const res = await apiRequest<any>(`/reservations/${reservation_id}/cancel`, { method: 'POST' });
+    emitSync(['reservations', 'workshops', 'analytics']);
+    return res;
+  },
   getMyReservations: () => apiRequest<any[]>('/reservations/me'),
   getPayPalConfig: () => apiRequest<any>('/paypal/config'),
   createPayPalOrder: (reservation_id: string) => apiRequest<any>('/paypal/orders', { method: 'POST', body: JSON.stringify({ reservation_id }) }),
-  capturePayPalOrder: (order_id: string) => apiRequest<any>(`/paypal/orders/${order_id}/capture`, { method: 'POST' }),
+  capturePayPalOrder: async (order_id: string) => {
+    const res = await apiRequest<any>(`/paypal/orders/${order_id}/capture`, { method: 'POST' });
+    emitSync(['reservations', 'workshops', 'rewards', 'payments', 'analytics', 'notifications', 'admin']);
+    return res;
+  },
 
   // Rewards & Referrals
   getMyRewards: () => apiRequest<any>('/rewards/me'),
@@ -110,7 +300,11 @@ export const api = {
   getDemandTrends: () => apiRequest<any[]>('/analytics/demands'),
   getPaymentTransactions: () => apiRequest<any[]>('/analytics/payments'),
   getEvaluations: () => apiRequest<any[]>('/research/evaluations'),
-  runEvaluation: (payload: any) => apiRequest<any[]>('/research/evaluations', { method: 'POST', body: JSON.stringify(payload) }),
+  runEvaluation: async (payload: any) => {
+    const res = await apiRequest<any[]>('/research/evaluations', { method: 'POST', body: JSON.stringify(payload) });
+    emitSync(['evaluations']);
+    return res;
+  },
 
   // Admin
   getAdminUsers: () => apiRequest<any[]>('/admin/users'),

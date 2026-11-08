@@ -1,23 +1,32 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../../api/client';
+import React, { useEffect, useState, useCallback } from 'react';
+import { api, useSyncRefresh } from '../../api/client';
 import { RewardCampaign } from '../../types';
-import { Tag, Plus, Loader2, CheckCircle2, DollarSign } from 'lucide-react';
+import { Tag, Plus, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+
+type CampaignMechanism =
+  | 'welcome'
+  | 'early_bird'
+  | 'store_credit'
+  | 'digital_gift'
+  | 'referral'
+  | 'badge';
 
 export const RewardStudio: React.FC = () => {
   const [campaigns, setCampaigns] = useState<RewardCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Form state
   const [name, setName] = useState('');
-  const [campaignType, setCampaignType] = useState<'welcome' | 'early_bird' | 'store_credit'>('welcome');
+  const [campaignType, setCampaignType] = useState<CampaignMechanism>('welcome');
   const [discountAmountDollars, setDiscountAmountDollars] = useState('10.00');
   const [minSpendDollars, setMinSpendDollars] = useState('25.00');
   const [totalBudgetDollars, setTotalBudgetDollars] = useState('500.00');
   const [creating, setCreating] = useState(false);
 
-  const fetchCampaigns = async () => {
-    setLoading(true);
+  const fetchCampaigns = useCallback(async () => {
     try {
       const data = await api.getMerchantRewards();
       setCampaigns(data);
@@ -26,31 +35,61 @@ export const RewardStudio: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchCampaigns();
-  }, []);
+  }, [fetchCampaigns]);
+
+  useSyncRefresh(['rewards', 'analytics'], fetchCampaigns);
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (creating) return;
+    const discountNum = parseFloat(discountAmountDollars);
+    const minSpendNum = parseFloat(minSpendDollars);
+    const budgetNum = parseFloat(totalBudgetDollars);
+    if (!name.trim() || Number.isNaN(discountNum) || discountNum < 0 || Number.isNaN(budgetNum) || budgetNum < 0) {
+      setFeedback({ type: 'error', message: 'Please enter a campaign name and valid non-negative USD amounts.' });
+      return;
+    }
     setCreating(true);
+    setFeedback(null);
     try {
       await api.createMerchantReward({
-        name,
+        name: name.trim(),
         campaign_type: campaignType,
-        discount_amount_cents: Math.round(parseFloat(discountAmountDollars) * 100),
-        min_spend_cents: Math.round(parseFloat(minSpendDollars) * 100),
-        total_budget_cents: Math.round(parseFloat(totalBudgetDollars) * 100),
+        discount_amount_cents: Math.round(discountNum * 100),
+        min_spend_cents: Math.max(0, Math.round((Number.isNaN(minSpendNum) ? 0 : minSpendNum) * 100)),
+        total_budget_cents: Math.round(budgetNum * 100),
         max_per_user: 1,
       });
       setName('');
       setShowForm(false);
-      fetchCampaigns();
-    } catch (err) {
-      console.error('Failed to create campaign', err);
+      setFeedback({ type: 'success', message: 'Merchant-funded reward campaign launched.' });
+      await fetchCampaigns();
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Failed to create campaign.' });
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleToggleActive = async (campaign: RewardCampaign) => {
+    if (togglingId) return;
+    setTogglingId(campaign.id);
+    setFeedback(null);
+    try {
+      await api.updateMerchantReward(campaign.id, { is_active: !campaign.is_active });
+      setFeedback({
+        type: 'success',
+        message: `"${campaign.name}" ${!campaign.is_active ? 'activated' : 'paused'}. Server checkout quotes updated.`,
+      });
+      await fetchCampaigns();
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Failed to update campaign status.' });
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -69,13 +108,35 @@ export const RewardStudio: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-forest text-ivory text-xs font-semibold hover:bg-charcoal transition-colors shadow-xs"
+            type="button"
+            onClick={() => {
+              setShowForm(!showForm);
+              setFeedback(null);
+            }}
+            className="nv-btn-press inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-forest text-ivory text-xs font-semibold hover:bg-charcoal transition-colors shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
           >
             <Plus className="w-4 h-4" />
             <span>{showForm ? 'Cancel' : 'New Campaign'}</span>
           </button>
         </div>
+
+        {feedback && (
+          <div
+            role={feedback.type === 'error' ? 'alert' : 'status'}
+            className={`p-3.5 rounded-xl border text-xs flex items-center gap-2 ${
+              feedback.type === 'error'
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-mint/50 border-forest/20 text-forest font-medium'
+            }`}
+          >
+            {feedback.type === 'error' ? (
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-forest" />
+            )}
+            <span>{feedback.message}</span>
+          </div>
+        )}
 
         {/* Campaign Creation Form */}
         {showForm && (
@@ -99,20 +160,24 @@ export const RewardStudio: React.FC = () => {
                 <label className="text-xs font-medium text-charcoal/70 mb-1 block">Promotion Type</label>
                 <select
                   value={campaignType}
-                  onChange={(e: any) => setCampaignType(e.target.value)}
+                  onChange={(e) => setCampaignType(e.target.value as CampaignMechanism)}
                   className="w-full p-2.5 bg-ivory border border-warmgray rounded-xl text-xs"
                 >
                   <option value="welcome">Welcome Discount (First Purchase)</option>
                   <option value="early_bird">Early-Bird Discount (3+ Days Ahead)</option>
                   <option value="store_credit">Store Credit Allocation</option>
+                  <option value="digital_gift">Digital Gift & Starter Kit</option>
+                  <option value="referral">Verified Referral Bonus</option>
+                  <option value="badge">Achievement Badge Trigger</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-charcoal/70 mb-1 block">Discount Amount ($)</label>
+                <label className="text-xs font-medium text-charcoal/70 mb-1 block">Discount / Credit Value ($)</label>
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   required
                   value={discountAmountDollars}
                   onChange={(e) => setDiscountAmountDollars(e.target.value)}
@@ -120,16 +185,31 @@ export const RewardStudio: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="text-xs font-medium text-charcoal/70 mb-1 block">Total Budget Allocation ($)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={totalBudgetDollars}
-                  onChange={(e) => setTotalBudgetDollars(e.target.value)}
-                  className="w-full p-2.5 bg-ivory border border-warmgray rounded-xl text-xs font-mono"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-charcoal/70 mb-1 block">Min Spend ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={minSpendDollars}
+                    onChange={(e) => setMinSpendDollars(e.target.value)}
+                    className="w-full p-2.5 bg-ivory border border-warmgray rounded-xl text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-charcoal/70 mb-1 block">Total Budget ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={totalBudgetDollars}
+                    onChange={(e) => setTotalBudgetDollars(e.target.value)}
+                    className="w-full p-2.5 bg-ivory border border-warmgray rounded-xl text-xs font-mono"
+                  />
+                </div>
               </div>
             </div>
 
@@ -137,9 +217,10 @@ export const RewardStudio: React.FC = () => {
               <button
                 type="submit"
                 disabled={creating}
-                className="px-5 py-2.5 bg-forest hover:bg-charcoal text-ivory text-xs font-semibold rounded-xl transition-colors flex items-center gap-2"
+                className="nv-btn-press px-5 py-2.5 bg-forest hover:bg-charcoal disabled:opacity-60 text-ivory text-xs font-semibold rounded-xl transition-colors flex items-center gap-2"
               >
-                {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>Launch Promotion</span>}
+                {creating && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>{creating ? 'Launching...' : 'Launch Promotion'}</span>
               </button>
             </div>
           </form>
@@ -179,9 +260,20 @@ export const RewardStudio: React.FC = () => {
                         ${(c.remaining_budget_cents / 100).toFixed(2)} of ${(c.total_budget_cents / 100).toFixed(2)}
                       </td>
                       <td className="py-3 px-3">
-                        <span className="px-2 py-0.5 rounded-full bg-mint text-forest text-[10px] font-semibold">
-                          {c.is_active ? 'Active' : 'Paused'}
-                        </span>
+                        <button
+                          type="button"
+                          disabled={togglingId === c.id}
+                          onClick={() => handleToggleActive(c)}
+                          title={c.is_active ? 'Click to pause campaign' : 'Click to activate campaign'}
+                          className={`nv-btn-press inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest ${
+                            c.is_active
+                              ? 'bg-mint text-forest hover:bg-forest hover:text-ivory'
+                              : 'bg-warmgray text-charcoal/70 hover:bg-charcoal hover:text-ivory'
+                          }`}
+                        >
+                          {togglingId === c.id && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
+                          <span>{c.is_active ? 'Active' : 'Paused'}</span>
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -198,4 +290,3 @@ export const RewardStudio: React.FC = () => {
     </>
   );
 };
-

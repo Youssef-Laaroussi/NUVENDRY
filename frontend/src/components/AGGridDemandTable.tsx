@@ -67,8 +67,9 @@ export const AGGridDemandTable: React.FC<AGGridDemandTableProps> = ({
       flex: 1.2,
       cellRenderer: (params: any) => (
         <button
+          type="button"
           onClick={() => onGenerateOffer(params.data.id)}
-          className="inline-flex items-center gap-1 px-3 py-1 bg-forest hover:bg-charcoal text-ivory text-xs font-semibold rounded-md transition-colors"
+          className="nv-btn-press inline-flex items-center gap-1 px-3 py-1 bg-forest hover:bg-charcoal text-ivory text-xs font-semibold rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
         >
           <Sparkles className="w-3 h-3 text-gold" />
           <span>AI Offer</span>

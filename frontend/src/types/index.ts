@@ -140,6 +140,7 @@ export interface RewardsDashboard {
   currency: string;
   digital_gifts: {
     id: string;
+    workshop_id?: string;
     title: string;
     download_url?: string;
     access_code?: string;
@@ -151,7 +152,48 @@ export interface RewardsDashboard {
     description: string;
     unlocked: boolean;
   }[];
+  ledger?: {
+    id: string;
+    reward_type: string;
+    delta_cents: number;
+    description: string;
+    created_at: string;
+  }[];
+  available_campaigns?: {
+    id: string;
+    name: string;
+    campaign_type: string;
+    discount_amount_cents: number;
+    discount_percentage: number;
+    min_spend_cents: number;
+  }[];
   first_purchase_eligible: boolean;
+}
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  link?: string | null;
+  type?: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface WorkshopRecommendation {
+  workshop: Workshop;
+  alignment_percentage: number;
+  reasons: string[];
+  based_on_demands?: number;
+}
+
+export interface WorkshopMaterials {
+  workshop_id: string;
+  workshop_title: string;
+  instructor?: string;
+  access_code: string;
+  download_url?: string;
+  deliverables: string[];
 }
 
 export interface AnalyticsOverview {

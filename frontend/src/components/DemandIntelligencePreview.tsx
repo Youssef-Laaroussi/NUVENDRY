@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
   Layers,
@@ -59,6 +60,12 @@ const DEMAND_TOPICS = [
 export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) => {
   const navigate = useNavigate();
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [hasSwitched, setHasSwitched] = useState(false);
+
+  const handleSelectOpp = (idx: number) => {
+    setSelectedIdx(idx);
+    setHasSwitched(true);
+  };
 
   const primaryCluster = clusters.length > 0 ? clusters[0] : null;
 
@@ -196,20 +203,35 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
 
               {/* 3 Staggered Floating White Capability Pills */}
               <div className="flex flex-col gap-2.5 -ml-3 sm:-ml-2">
-                <div className="ml-3 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E4EDE7] shadow-[0_4px_14px_rgba(15,41,30,0.07)] text-[12px] font-semibold text-[#1F2937] whitespace-nowrap">
+                <motion.div
+                  animate={{ y: [0, -3.5, 0] }}
+                  transition={{ repeat: Infinity, duration: 3.2, ease: 'easeInOut' }}
+                  whileHover={{ scale: 1.04 }}
+                  className="ml-3 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E4EDE7] shadow-[0_4px_14px_rgba(15,41,30,0.07)] text-[12px] font-semibold text-[#1F2937] whitespace-nowrap"
+                >
                   <Layers className="w-3.5 h-3.5 text-[#156847] stroke-[2] shrink-0" />
                   <span>Parse Prompts</span>
-                </div>
+                </motion.div>
 
-                <div className="-ml-1 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E4EDE7] shadow-[0_4px_14px_rgba(15,41,30,0.07)] text-[12px] font-semibold text-[#1F2937] whitespace-nowrap">
+                <motion.div
+                  animate={{ y: [0, -3, 0] }}
+                  transition={{ repeat: Infinity, duration: 2.8, ease: 'easeInOut', delay: 0.3 }}
+                  whileHover={{ scale: 1.04 }}
+                  className="-ml-1 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E4EDE7] shadow-[0_4px_14px_rgba(15,41,30,0.07)] text-[12px] font-semibold text-[#1F2937] whitespace-nowrap"
+                >
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#156847] stroke-[2] shrink-0" />
                   <span>Validate Constraints</span>
-                </div>
+                </motion.div>
 
-                <div className="ml-1 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E4EDE7] shadow-[0_4px_14px_rgba(15,41,30,0.07)] text-[12px] font-semibold text-[#1F2937] whitespace-nowrap">
+                <motion.div
+                  animate={{ y: [0, -3.5, 0] }}
+                  transition={{ repeat: Infinity, duration: 3.4, ease: 'easeInOut', delay: 0.6 }}
+                  whileHover={{ scale: 1.04 }}
+                  className="ml-1 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E4EDE7] shadow-[0_4px_14px_rgba(15,41,30,0.07)] text-[12px] font-semibold text-[#1F2937] whitespace-nowrap"
+                >
                   <LayoutGrid className="w-3.5 h-3.5 text-[#156847] stroke-[2] shrink-0" />
                   <span>Organize Opportunities</span>
-                </div>
+                </motion.div>
               </div>
             </div>
           </div>
@@ -220,7 +242,10 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
         {/* ========================================================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
           {/* KPI 1: Total Requests */}
-          <div className="bg-white rounded-2xl border border-[#E6EDE8] px-5 py-4 shadow-[0_4px_18px_rgba(15,41,30,0.04)] flex items-center justify-between gap-3">
+          <motion.div
+            whileHover={{ y: -3, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+            className="bg-white rounded-2xl border border-[#E6EDE8] px-5 py-4 shadow-[0_4px_18px_rgba(15,41,30,0.04)] flex items-center justify-between gap-3"
+          >
             <div className="flex items-center gap-3.5">
               <div className="w-11 h-11 rounded-xl bg-[#EEF5FF] text-[#2563EB] flex items-center justify-center shrink-0">
                 <FileText className="w-5 h-5 stroke-[1.9]" />
@@ -242,10 +267,13 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
               </span>
               <span className="text-[10.5px] text-[#6B7280] mt-1">vs. prior 14 days</span>
             </div>
-          </div>
+          </motion.div>
 
           {/* KPI 2: Active Clusters */}
-          <div className="bg-white rounded-2xl border border-[#E6EDE8] px-5 py-4 shadow-[0_4px_18px_rgba(15,41,30,0.04)] flex items-center justify-between gap-3">
+          <motion.div
+            whileHover={{ y: -3, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+            className="bg-white rounded-2xl border border-[#E6EDE8] px-5 py-4 shadow-[0_4px_18px_rgba(15,41,30,0.04)] flex items-center justify-between gap-3"
+          >
             <div className="flex items-center gap-3.5">
               <div className="w-11 h-11 rounded-xl bg-[#FEF7E6] text-[#D99B26] flex items-center justify-center shrink-0">
                 <Layers className="w-5 h-5 stroke-[1.9]" />
@@ -267,10 +295,13 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
               </span>
               <span className="text-[10.5px] text-[#6B7280] mt-1">vs. prior 14 days</span>
             </div>
-          </div>
+          </motion.div>
 
           {/* KPI 3: Opportunities */}
-          <div className="bg-white rounded-2xl border border-[#E6EDE8] px-5 py-4 shadow-[0_4px_18px_rgba(15,41,30,0.04)] flex items-center justify-between gap-3">
+          <motion.div
+            whileHover={{ y: -3, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+            className="bg-white rounded-2xl border border-[#E6EDE8] px-5 py-4 shadow-[0_4px_18px_rgba(15,41,30,0.04)] flex items-center justify-between gap-3"
+          >
             <div className="flex items-center gap-3.5">
               <div className="w-11 h-11 rounded-xl bg-[#FFF1E6] text-[#EA7A24] flex items-center justify-center shrink-0">
                 <Target className="w-5 h-5 stroke-[1.9]" />
@@ -292,10 +323,13 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
               </span>
               <span className="text-[10.5px] text-[#6B7280] mt-1">vs. prior 14 days</span>
             </div>
-          </div>
+          </motion.div>
 
           {/* KPI 4: Conversion Rate */}
-          <div className="bg-white rounded-2xl border border-[#E6EDE8] px-5 py-4 shadow-[0_4px_18px_rgba(15,41,30,0.04)] flex items-center justify-between gap-3">
+          <motion.div
+            whileHover={{ y: -3, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+            className="bg-white rounded-2xl border border-[#E6EDE8] px-5 py-4 shadow-[0_4px_18px_rgba(15,41,30,0.04)] flex items-center justify-between gap-3"
+          >
             <div className="flex items-center gap-3.5">
               <div className="w-11 h-11 rounded-xl bg-[#E8F6EE] text-[#16794F] flex items-center justify-center shrink-0">
                 <Compass className="w-5 h-5 stroke-[1.9]" />
@@ -317,7 +351,7 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
               </span>
               <span className="text-[10.5px] text-[#6B7280] mt-1">vs. prior 14 days</span>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* ========================================================= */}
@@ -334,26 +368,47 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
             </div>
 
             <div className="space-y-4 my-auto">
-              {DEMAND_TOPICS.map((topic) => (
-                <div key={topic.label} className="flex items-center gap-3.5">
-                  <span className="w-[106px] text-right text-[12.5px] font-medium text-[#1F2937] shrink-0">
-                    {topic.label}
-                  </span>
-
-                  <div className="flex-1 flex items-center gap-2.5 min-w-0">
-                    <div
-                      className="h-[18px] rounded-[5px] transition-all duration-500"
-                      style={{
-                        width: `${topic.widthPct}%`,
-                        backgroundColor: topic.color,
-                      }}
-                    />
-                    <span className="text-[13px] font-bold text-[#111827] shrink-0">
-                      {topic.count}
+              {DEMAND_TOPICS.map((topic, tIdx) => {
+                const handleTopicSelect = () => {
+                  if (tIdx <= 2) {
+                    handleSelectOpp(tIdx);
+                  } else {
+                    navigate(`/demand?topic=${encodeURIComponent(topic.label)}`);
+                  }
+                };
+                return (
+                  <div
+                    key={topic.label}
+                    role="button"
+                    tabIndex={0}
+                    onClick={handleTopicSelect}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleTopicSelect();
+                      }
+                    }}
+                    className="group flex items-center gap-3.5 cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#156847]"
+                  >
+                    <span className="w-[106px] text-right text-[12.5px] font-medium text-[#1F2937] group-hover:text-[#156847] transition-colors shrink-0">
+                      {topic.label}
                     </span>
+
+                    <div className="flex-1 flex items-center gap-2.5 min-w-0">
+                      <div
+                        className="h-[18px] rounded-[5px] transition-all duration-300 group-hover:brightness-105"
+                        style={{
+                          width: `${topic.widthPct}%`,
+                          backgroundColor: topic.color,
+                        }}
+                      />
+                      <span className="text-[13px] font-bold text-[#111827] shrink-0">
+                        {topic.count}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -371,18 +426,21 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
               {opportunities.map((opp, idx) => {
                 const isSelected = selectedIdx === idx;
                 return (
-                  <div
+                  <motion.div
                     key={opp.id}
-                    onClick={() => setSelectedIdx(idx)}
+                    onClick={() => handleSelectOpp(idx)}
                     role="button"
                     tabIndex={0}
+                    aria-pressed={isSelected}
+                    whileHover={{ x: 3, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+                    whileTap={{ scale: 0.99 }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        setSelectedIdx(idx);
+                        handleSelectOpp(idx);
                       }
                     }}
-                    className={`rounded-xl px-3.5 py-3 border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                    className={`rounded-xl px-3.5 py-3 border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135A3E] ${
                       isSelected
                         ? 'bg-[#F8FBF9] border-[#DCECE3] shadow-[0_2px_10px_rgba(15,41,30,0.03)]'
                         : 'bg-white border-[#EEF2EF] hover:border-[#DCE8E1] hover:bg-[#FAFDFB]'
@@ -429,15 +487,15 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate('/demand');
+                          navigate(`/demand?topic=${encodeURIComponent(opp.title)}`);
                         }}
-                        className="px-3.5 py-1.5 rounded-lg bg-[#135A3E] hover:bg-[#0D432E] text-white text-[12px] font-semibold inline-flex items-center gap-1.5 transition-colors shadow-2xs whitespace-nowrap"
+                        className="nv-btn-press px-3.5 py-1.5 rounded-lg bg-[#135A3E] hover:bg-[#0D432E] text-white text-[12px] font-semibold inline-flex items-center gap-1.5 transition-colors shadow-2xs whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135A3E] focus-visible:ring-offset-1"
                       >
                         <span>View</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
@@ -447,8 +505,19 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
         {/* ========================================================= */}
         {/* BAND 4: Bottom Synthesized Opportunity Overview Card      */}
         {/* ========================================================= */}
-        <div className="bg-white rounded-2xl border border-[#E6EDE8] p-5 sm:p-6 shadow-[0_6px_26px_rgba(15,41,30,0.05)]">
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-6">
+        <div
+          aria-live="polite"
+          className="bg-white rounded-2xl border border-[#E6EDE8] p-5 sm:p-6 shadow-[0_6px_26px_rgba(15,41,30,0.05)] overflow-hidden"
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeOpp.id}
+              initial={{ opacity: 0.9, y: 3 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0.9, y: -3 }}
+              transition={{ duration: 0.16 }}
+              className="flex flex-col lg:flex-row items-stretch lg:items-center gap-6"
+            >
             {/* Left Rounded Thumbnail */}
             <div className="w-full lg:w-[208px] h-[142px] rounded-xl overflow-hidden shrink-0 bg-[#111827] shadow-2xs">
               <img
@@ -534,11 +603,12 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
                 <span>{activeOpp.validationNote}</span>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
-    </section>
-  );
+    </div>
+  </section>
+);
 };
 
 export default DemandIntelligencePreview;

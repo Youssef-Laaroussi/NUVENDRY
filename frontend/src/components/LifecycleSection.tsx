@@ -1,6 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { ArrowRight, Check } from 'lucide-react';
 import { PayPalOfficialLogo } from './HeroVisualization';
+import { scrollToSectionById } from '../layouts/PublicLayout';
 import step1Img from '../assets/step1-learner.png';
 import step3Img from '../assets/step3-instructor.png';
 
@@ -41,7 +44,11 @@ const Step2Illustration: React.FC = () => (
       </g>
 
       {/* AI Chip standing upright on pedestal */}
-      <g id="ai-chip">
+      <motion.g
+        id="ai-chip"
+        animate={{ y: [0, -3.5, 0] }}
+        transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+      >
         {/* Circuit Pins - Left */}
         <line x1="72" y1="56" x2="63" y2="56" stroke="#165C45" strokeWidth="2.8" strokeLinecap="round" />
         <line x1="72" y1="67" x2="63" y2="67" stroke="#165C45" strokeWidth="2.8" strokeLinecap="round" />
@@ -80,7 +87,7 @@ const Step2Illustration: React.FC = () => (
         >
           AI
         </text>
-      </g>
+      </motion.g>
     </svg>
   </div>
 );
@@ -91,18 +98,36 @@ const Step4Illustration: React.FC = () => (
     <OrganicWaveBackdrop />
 
     {/* Floating White Card with Official PayPal Logo + Checkmark Badge */}
-    <div className="relative z-10 w-44 sm:w-48 bg-white py-4 px-4 rounded-2xl shadow-[0_12px_30px_rgba(0,0,0,0.07)] border border-gray-100/90 flex items-center justify-between gap-3 transition-transform hover:-translate-y-0.5">
+    <motion.div
+      animate={{ y: [0, -3.5, 0] }}
+      transition={{ repeat: Infinity, duration: 3.2, ease: 'easeInOut' }}
+      whileHover={{ scale: 1.03 }}
+      className="relative z-10 w-44 sm:w-48 bg-white py-4 px-4 rounded-2xl shadow-[0_12px_30px_rgba(0,0,0,0.07)] border border-gray-100/90 flex items-center justify-between gap-3 transition-transform"
+    >
       <div className="flex-1 flex items-center justify-center">
         <PayPalOfficialLogo className="h-6 sm:h-7 w-auto" />
       </div>
       <div className="w-6 h-6 rounded-full bg-[#14533c] text-white flex items-center justify-center shrink-0 shadow-xs">
         <Check className="w-3.5 h-3.5 stroke-[3]" />
       </div>
-    </div>
+    </motion.div>
   </div>
 );
 
 export const LifecycleSection: React.FC = () => {
+  const navigate = useNavigate();
+
+  const activateStep = (action: () => void) => {
+    action();
+  };
+
+  const onStepKeyDown = (e: React.KeyboardEvent, action: () => void) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      action();
+    }
+  };
+
   return (
     <section
       id="how-it-works"
@@ -161,10 +186,18 @@ export const LifecycleSection: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6 relative">
           
           {/* STEP 1 */}
-          <div className="flex flex-col relative group">
+          <motion.div
+            role="button"
+            tabIndex={0}
+            whileHover={{ y: -4, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+            whileTap={{ scale: 0.985 }}
+            onClick={() => activateStep(() => navigate('/demand'))}
+            onKeyDown={(e) => onStepKeyDown(e, () => navigate('/demand'))}
+            className="flex flex-col relative group cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14533c]"
+          >
             {/* Step badge */}
             <div className="mb-2">
-              <span className="w-7 h-7 rounded-full bg-[#14533c] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              <span className="w-7 h-7 rounded-full bg-[#14533c] text-white flex items-center justify-center font-bold text-xs shadow-xs transition-transform duration-150 group-hover:scale-105">
                 1
               </span>
             </div>
@@ -180,7 +213,7 @@ export const LifecycleSection: React.FC = () => {
 
             {/* Content */}
             <div className="space-y-2 text-left">
-              <h3 className="font-bold text-base sm:text-lg text-gray-900">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 group-hover:text-[#14533c] transition-colors">
                 Express Your Need
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
@@ -189,28 +222,40 @@ export const LifecycleSection: React.FC = () => {
             </div>
 
             {/* Arrow connector to next step (visible on desktop) */}
-            <div className="hidden lg:flex absolute -right-3 top-20 -translate-y-1/2 text-gray-400 z-20 pointer-events-none">
+            <motion.div
+              animate={{ x: [0, 3, 0] }}
+              transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+              className="hidden lg:flex absolute -right-3 top-20 -translate-y-1/2 text-gray-400 z-20 pointer-events-none"
+            >
               <ArrowRight className="w-5 h-5 text-gray-400 stroke-[1.8]" />
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* STEP 2 */}
-          <div className="flex flex-col relative group">
+          <motion.div
+            role="button"
+            tabIndex={0}
+            whileHover={{ y: -4, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+            whileTap={{ scale: 0.985 }}
+            onClick={() => activateStep(() => scrollToSectionById('ai-demand'))}
+            onKeyDown={(e) => onStepKeyDown(e, () => scrollToSectionById('ai-demand'))}
+            className="flex flex-col relative group cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14533c]"
+          >
             {/* Step badge */}
             <div className="mb-2">
-              <span className="w-7 h-7 rounded-full bg-[#14533c] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              <span className="w-7 h-7 rounded-full bg-[#14533c] text-white flex items-center justify-center font-bold text-xs shadow-xs transition-transform duration-150 group-hover:scale-105">
                 2
               </span>
             </div>
 
             {/* 3D Illustration with surrounding organic wave */}
-            <div className="relative mb-4 h-44 w-full flex items-center justify-center overflow-visible">
+            <div className="relative mb-4 h-44 w-full flex items-center justify-center overflow-visible transition-transform duration-200 group-hover:-translate-y-0.5">
               <Step2Illustration />
             </div>
 
             {/* Content */}
             <div className="space-y-2 text-left">
-              <h3 className="font-bold text-base sm:text-lg text-gray-900">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 group-hover:text-[#14533c] transition-colors">
                 AI Clusters Demand
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
@@ -219,16 +264,28 @@ export const LifecycleSection: React.FC = () => {
             </div>
 
             {/* Arrow connector to next step (visible on desktop) */}
-            <div className="hidden lg:flex absolute -right-3 top-20 -translate-y-1/2 text-gray-400 z-20 pointer-events-none">
+            <motion.div
+              animate={{ x: [0, 3, 0] }}
+              transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+              className="hidden lg:flex absolute -right-3 top-20 -translate-y-1/2 text-gray-400 z-20 pointer-events-none"
+            >
               <ArrowRight className="w-5 h-5 text-gray-400 stroke-[1.8]" />
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* STEP 3 */}
-          <div className="flex flex-col relative group">
+          <motion.div
+            role="button"
+            tabIndex={0}
+            whileHover={{ y: -4, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+            whileTap={{ scale: 0.985 }}
+            onClick={() => activateStep(() => scrollToSectionById('for-instructors'))}
+            onKeyDown={(e) => onStepKeyDown(e, () => scrollToSectionById('for-instructors'))}
+            className="flex flex-col relative group cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14533c]"
+          >
             {/* Step badge */}
             <div className="mb-2">
-              <span className="w-7 h-7 rounded-full bg-[#14533c] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              <span className="w-7 h-7 rounded-full bg-[#14533c] text-white flex items-center justify-center font-bold text-xs shadow-xs transition-transform duration-150 group-hover:scale-105">
                 3
               </span>
             </div>
@@ -244,7 +301,7 @@ export const LifecycleSection: React.FC = () => {
 
             {/* Content */}
             <div className="space-y-2 text-left">
-              <h3 className="font-bold text-base sm:text-lg text-gray-900">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 group-hover:text-[#14533c] transition-colors">
                 Instructor Publishes
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
@@ -253,16 +310,28 @@ export const LifecycleSection: React.FC = () => {
             </div>
 
             {/* Arrow connector to next step (visible on desktop) */}
-            <div className="hidden lg:flex absolute -right-3 top-20 -translate-y-1/2 text-gray-400 z-20 pointer-events-none">
+            <motion.div
+              animate={{ x: [0, 3, 0] }}
+              transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+              className="hidden lg:flex absolute -right-3 top-20 -translate-y-1/2 text-gray-400 z-20 pointer-events-none"
+            >
               <ArrowRight className="w-5 h-5 text-gray-400 stroke-[1.8]" />
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* STEP 4 */}
-          <div className="flex flex-col relative group">
+          <motion.div
+            role="button"
+            tabIndex={0}
+            whileHover={{ y: -4, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+            whileTap={{ scale: 0.985 }}
+            onClick={() => activateStep(() => scrollToSectionById('featured-workshops'))}
+            onKeyDown={(e) => onStepKeyDown(e, () => scrollToSectionById('featured-workshops'))}
+            className="flex flex-col relative group cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14533c]"
+          >
             {/* Step badge */}
             <div className="mb-2">
-              <span className="w-7 h-7 rounded-full bg-[#14533c] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              <span className="w-7 h-7 rounded-full bg-[#14533c] text-white flex items-center justify-center font-bold text-xs shadow-xs transition-transform duration-150 group-hover:scale-105">
                 4
               </span>
             </div>
@@ -274,14 +343,14 @@ export const LifecycleSection: React.FC = () => {
 
             {/* Content */}
             <div className="space-y-2 text-left">
-              <h3 className="font-bold text-base sm:text-lg text-gray-900">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 group-hover:text-[#14533c] transition-colors">
                 Book with PayPal
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
                 Learners receive rewards for eligible bookings and complete a seamless checkout via PayPal Sandbox.
               </p>
             </div>
-          </div>
+          </motion.div>
 
         </div>
       </div>

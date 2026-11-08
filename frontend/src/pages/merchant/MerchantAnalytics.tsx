@@ -1,30 +1,31 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../../api/client';
+import React, { useEffect, useState, useCallback } from 'react';
+import { api, useSyncRefresh } from '../../api/client';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { BarChart3, TrendingUp, Layers, Users } from 'lucide-react';
+import { TrendingUp, Layers } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const MerchantAnalytics: React.FC = () => {
   const [trends, setTrends] = useState<any[]>([]);
   const [overview, setOverview] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      const [t, o] = await Promise.all([
+        api.getDemandTrends(),
+        api.getAnalyticsOverview(),
+      ]);
+      setTrends(t);
+      setOverview(o);
+    } catch (err) {
+      console.error('Failed to load analytics', err);
+    }
+  }, []);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [t, o] = await Promise.all([
-          api.getDemandTrends(),
-          api.getAnalyticsOverview(),
-        ]);
-        setTrends(t);
-        setOverview(o);
-      } catch (err) {
-        console.error('Failed to load analytics', err);
-      } finally {
-        setLoading(false);
-      }
-    }
     load();
-  }, []);
+  }, [load]);
+
+  useSyncRefresh(['demands', 'clusters', 'reservations', 'workshops', 'analytics'], load);
 
   const chartData = trends.map((t) => ({
     name: t.topic,
@@ -47,18 +48,27 @@ export const MerchantAnalytics: React.FC = () => {
 
         {/* Top Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-xl border border-warmgray space-y-1">
+          <Link
+            to="/merchant/demand-intelligence"
+            className="nv-card-lift bg-white p-4 rounded-xl border border-warmgray space-y-1 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+          >
             <span className="text-[11px] font-medium text-charcoal/60">Total Demands</span>
             <div className="text-xl font-bold font-mono text-charcoal">{overview?.total_demands || 0}</div>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-warmgray space-y-1">
+          </Link>
+          <Link
+            to="/merchant/demand-intelligence"
+            className="nv-card-lift bg-white p-4 rounded-xl border border-warmgray space-y-1 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+          >
             <span className="text-[11px] font-medium text-charcoal/60">Active Clusters</span>
             <div className="text-xl font-bold font-mono text-charcoal">{overview?.active_clusters || 0}</div>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-warmgray space-y-1">
+          </Link>
+          <Link
+            to="/merchant/reservations"
+            className="nv-card-lift bg-white p-4 rounded-xl border border-warmgray space-y-1 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+          >
             <span className="text-[11px] font-medium text-charcoal/60">Confirmed Bookings</span>
             <div className="text-xl font-bold font-mono text-forest">{overview?.confirmed_reservations || 0}</div>
-          </div>
+          </Link>
           <div className="bg-white p-4 rounded-xl border border-warmgray space-y-1">
             <span className="text-[11px] font-medium text-charcoal/60">Conversion Rate</span>
             <div className="text-xl font-bold font-mono text-charcoal">{overview?.conversion_rate_percentage || 0}%</div>
@@ -121,4 +131,3 @@ export const MerchantAnalytics: React.FC = () => {
     </>
   );
 };
-

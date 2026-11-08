@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../../api/client';
-import { Users, CheckCircle2, Clock, CheckSquare, Square } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { api, useSyncRefresh } from '../../api/client';
+import { Users, CheckSquare, Square, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const MerchantReservations: React.FC = () => {
   const [reservations, setReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const fetchReservations = async () => {
-    setLoading(true);
+  const fetchReservations = useCallback(async () => {
     try {
       const data = await api.getMerchantReservations();
       setReservations(data);
@@ -16,18 +17,31 @@ export const MerchantReservations: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchReservations();
-  }, []);
+  }, [fetchReservations]);
 
-  const handleToggleAttendance = async (reservationId: string, currentStatus: boolean) => {
+  useSyncRefresh(['reservations', 'workshops', 'rewards', 'analytics'], fetchReservations);
+
+  const handleToggleAttendance = async (reservationId: string, currentStatus: boolean, buyerName: string) => {
+    if (togglingId) return;
+    setTogglingId(reservationId);
+    setFeedback(null);
     try {
       await api.markAttendance(reservationId, !currentStatus);
-      fetchReservations();
-    } catch (err) {
-      console.error('Failed to mark attendance', err);
+      await fetchReservations();
+      setFeedback({
+        type: 'success',
+        message: !currentStatus
+          ? `Attendance verified for ${buyerName}. Completion badge evaluated.`
+          : `Attendance unmarked for ${buyerName}.`,
+      });
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Failed to update attendance.' });
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -43,6 +57,24 @@ export const MerchantReservations: React.FC = () => {
             Review confirmed learner registrations and verify live workshop attendance to award achievement badges.
           </p>
         </div>
+
+        {feedback && (
+          <div
+            role={feedback.type === 'error' ? 'alert' : 'status'}
+            className={`p-3.5 rounded-xl border text-xs flex items-center gap-2 ${
+              feedback.type === 'error'
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-mint/50 border-forest/20 text-forest font-medium'
+            }`}
+          >
+            {feedback.type === 'error' ? (
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-forest" />
+            )}
+            <span>{feedback.message}</span>
+          </div>
+        )}
 
         {loading ? (
           <div className="py-12 text-center text-xs text-charcoal/60">Loading attendance roster...</div>
@@ -63,8 +95,9 @@ export const MerchantReservations: React.FC = () => {
                 <tbody className="divide-y divide-warmgray/60 font-medium">
                   {reservations.map((r) => {
                     const isConfirmed = r.status === 'confirmed';
+                    const isBusy = togglingId === r.id;
                     return (
-                      <tr key={r.id} className="hover:bg-ivory/50">
+                      <tr key={r.id} className="nv-row-hover hover:bg-ivory/50">
                         <td className="py-3.5 px-4">
                           <div className="font-semibold text-charcoal">{r.buyer_name}</div>
                           <div className="text-[11px] text-charcoal/50 font-normal">{r.buyer_email}</div>
@@ -88,19 +121,22 @@ export const MerchantReservations: React.FC = () => {
                         <td className="py-3.5 px-4 text-center">
                           {isConfirmed ? (
                             <button
-                              onClick={() => handleToggleAttendance(r.id, r.attended || false)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-ivory border border-warmgray hover:border-forest text-xs transition-colors"
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => handleToggleAttendance(r.id, Boolean(r.attended), r.buyer_name)}
+                              className="nv-btn-press inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-ivory border border-warmgray hover:border-forest disabled:opacity-60 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
                             >
-                              {r.attended ? (
-                                <>
-                                  <CheckSquare className="w-3.5 h-3.5 text-forest" />
-                                  <span className="text-forest font-semibold">Attended</span>
-                                </>
+                              {isBusy ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-forest" />
+                              ) : r.attended ? (
+                                <CheckSquare className="w-3.5 h-3.5 text-forest" />
                               ) : (
-                                <>
-                                  <Square className="w-3.5 h-3.5 text-charcoal/40" />
-                                  <span className="text-charcoal/60">Mark Present</span>
-                                </>
+                                <Square className="w-3.5 h-3.5 text-charcoal/40" />
+                              )}
+                              {r.attended ? (
+                                <span className="text-forest font-semibold">Attended</span>
+                              ) : (
+                                <span className="text-charcoal/60">Mark Present</span>
                               )}
                             </button>
                           ) : (
@@ -127,4 +163,3 @@ export const MerchantReservations: React.FC = () => {
     </>
   );
 };
-

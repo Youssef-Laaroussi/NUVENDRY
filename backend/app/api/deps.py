@@ -3,6 +3,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.entities import User
@@ -20,7 +21,11 @@ async def get_current_user_optional(
     if not user_id:
         return None
     
-    stmt = select(User).where(User.id == user_id, User.is_active == True)
+    stmt = (
+        select(User)
+        .options(selectinload(User.profile), selectinload(User.merchant_profile))
+        .where(User.id == user_id, User.is_active == True)
+    )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 

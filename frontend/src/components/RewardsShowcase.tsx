@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Gift,
   Calculator,
@@ -8,6 +10,7 @@ import {
   CreditCard,
   Users,
 } from 'lucide-react';
+import { Workshop } from '../types';
 import demandOpportunityLaptopImg from '../assets/demand-opportunity-laptop.jpg';
 
 /* Official PayPal Double-P Monogram Vector Mark */
@@ -102,11 +105,27 @@ const REWARD_MECHANISMS: MechanismItem[] = [
   },
 ];
 
-export const RewardsShowcase: React.FC = () => {
+interface RewardsShowcaseProps {
+  workshops?: Workshop[];
+}
+
+const POST_CHECKOUT_NOTES: Record<number, string> = {
+  4: 'Digital Gifts unlock automatically after PayPal Sandbox payment verification (starter repo, prompts & datasets).',
+  5: 'Verified Referrals credit $5.00 to the merchant-local ledger only after a referred learner completes booking.',
+  6: 'Achievement Badges unlock after verified workshop enrollment, attendance, or top referral milestones.',
+};
+
+export const RewardsShowcase: React.FC<RewardsShowcaseProps> = ({ workshops = [] }) => {
   const baseFee = 39.0;
   const [applyWelcome, setApplyWelcome] = useState<boolean>(true);
   const [applyEarlyBird, setApplyEarlyBird] = useState<boolean>(true);
   const [applyStoreCredit, setApplyStoreCredit] = useState<boolean>(false);
+  const [selectedMechanismCard, setSelectedMechanismCard] = useState<number | null>(null);
+
+  const langGraphWorkshop =
+    workshops.find((w) => w.category === 'LangGraph Agents' && !w.id.startsWith('fallback-')) ||
+    workshops.find((w) => !w.id.startsWith('fallback-'));
+  const workshopHref = langGraphWorkshop ? `/workshops/${langGraphWorkshop.id}` : '/workshops';
 
   const welcomeDeduction = applyWelcome ? 5.0 : 0;
   const earlyBirdDeduction = applyEarlyBird ? 5.0 : 0;
@@ -114,6 +133,13 @@ export const RewardsShowcase: React.FC = () => {
 
   const totalDiscount = welcomeDeduction + earlyBirdDeduction + storeCreditDeduction;
   const amountSentToPayPal = Math.max(baseFee - totalDiscount, 5.0);
+
+  const handleMechanismCardActivate = (num: number) => {
+    setSelectedMechanismCard((prev) => (prev === num ? null : num));
+    if (num === 1) setApplyWelcome((prev) => !prev);
+    if (num === 2) setApplyEarlyBird((prev) => !prev);
+    if (num === 3) setApplyStoreCredit((prev) => !prev);
+  };
 
   const renderMechanismIcon = (type: MechanismItem['icon']) => {
     switch (type) {
@@ -198,7 +224,10 @@ export const RewardsShowcase: React.FC = () => {
               </div>
 
               {/* Selected Workshop Preview Strip */}
-              <div className="bg-[#F8FAF9] rounded-xl border border-[#EBF1ED] p-2.5 flex items-center gap-3 mb-4">
+              <Link
+                to={workshopHref}
+                className="bg-[#F8FAF9] hover:bg-[#F2F7F4] rounded-xl border border-[#EBF1ED] p-2.5 flex items-center gap-3 mb-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#156947]"
+              >
                 <img
                   src={demandOpportunityLaptopImg}
                   alt="Building Production-Ready LangGraph Agents"
@@ -219,7 +248,7 @@ export const RewardsShowcase: React.FC = () => {
                     </span>
                   </div>
                 </div>
-              </div>
+              </Link>
 
               {/* Base Workshop Fee Row */}
               <div className="flex items-center justify-between py-2.5 border-b border-[#EDF2EE]">
@@ -257,8 +286,10 @@ export const RewardsShowcase: React.FC = () => {
                       applyWelcome ? 'bg-[#156947]' : 'bg-[#C5CFC9]'
                     }`}
                   >
-                    <span
-                      className={`block w-[18px] h-[18px] rounded-full bg-white shadow-xs transition-transform duration-200 ${
+                    <motion.span
+                      layout
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      className={`block w-[18px] h-[18px] rounded-full bg-white shadow-xs ${
                         applyWelcome ? 'translate-x-[18px]' : 'translate-x-0'
                       }`}
                     />
@@ -291,8 +322,10 @@ export const RewardsShowcase: React.FC = () => {
                       applyEarlyBird ? 'bg-[#156947]' : 'bg-[#C5CFC9]'
                     }`}
                   >
-                    <span
-                      className={`block w-[18px] h-[18px] rounded-full bg-white shadow-xs transition-transform duration-200 ${
+                    <motion.span
+                      layout
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      className={`block w-[18px] h-[18px] rounded-full bg-white shadow-xs ${
                         applyEarlyBird ? 'translate-x-[18px]' : 'translate-x-0'
                       }`}
                     />
@@ -325,8 +358,10 @@ export const RewardsShowcase: React.FC = () => {
                       applyStoreCredit ? 'bg-[#156947]' : 'bg-[#C5CFC9]'
                     }`}
                   >
-                    <span
-                      className={`block w-[18px] h-[18px] rounded-full bg-white shadow-xs transition-transform duration-200 ${
+                    <motion.span
+                      layout
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      className={`block w-[18px] h-[18px] rounded-full bg-white shadow-xs ${
                         applyStoreCredit ? 'translate-x-[18px]' : 'translate-x-0'
                       }`}
                     />
@@ -361,40 +396,71 @@ export const RewardsShowcase: React.FC = () => {
                   </span>
                 </div>
 
-                <span className="text-[21px] font-extrabold text-[#135A3E] tracking-tight shrink-0">
+                <motion.span
+                  key={amountSentToPayPal}
+                  initial={{ scale: 1.15, opacity: 0.8 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                  className="text-[21px] font-extrabold text-[#135A3E] tracking-tight shrink-0"
+                >
                   ${amountSentToPayPal.toFixed(2)}
-                </span>
+                </motion.span>
               </div>
+
+              {selectedMechanismCard && POST_CHECKOUT_NOTES[selectedMechanismCard] && (
+                <div className="nv-stage-panel rounded-lg bg-[#F8FBF9] border border-[#DCE8E1] px-3 py-2 text-[11px] text-[#374151] leading-snug">
+                  {POST_CHECKOUT_NOTES[selectedMechanismCard]}
+                </div>
+              )}
             </div>
           </div>
 
           {/* RIGHT COLUMN: 3x2 Grid of Six Reward Mechanism Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-            {REWARD_MECHANISMS.map((item) => (
-              <div
-                key={item.number}
-                className="bg-white rounded-2xl border border-[#E6EDE8] p-5 sm:p-6 shadow-[0_4px_20px_rgba(15,41,30,0.04)] hover:shadow-[0_10px_28px_rgba(15,41,30,0.07)] transition-all flex flex-col justify-start"
-              >
-                {/* Number Circle + Mint Rounded Icon Box */}
-                <div className="flex items-center gap-2.5 mb-4">
-                  <span className="w-7 h-7 rounded-full bg-[#E6F4EC] text-[#14533C] text-[12.5px] font-bold flex items-center justify-center shrink-0">
-                    {item.number}
-                  </span>
+            {REWARD_MECHANISMS.map((item) => {
+              const isCardSelected = selectedMechanismCard === item.number;
+              return (
+                <motion.div
+                  key={item.number}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isCardSelected}
+                  whileHover={{ y: -4, transition: { type: 'spring', stiffness: 450, damping: 25 } }}
+                  whileTap={{ scale: 0.985 }}
+                  onClick={() => handleMechanismCardActivate(item.number)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleMechanismCardActivate(item.number);
+                    }
+                  }}
+                  className={`nv-card-lift bg-white rounded-2xl border p-5 sm:p-6 shadow-[0_4px_20px_rgba(15,41,30,0.04)] hover:shadow-[0_10px_28px_rgba(15,41,30,0.07)] transition-all flex flex-col justify-start cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#156847] ${
+                    isCardSelected
+                      ? 'border-[#BFE0CD] ring-2 ring-[#156847]/20'
+                      : 'border-[#E6EDE8]'
+                  }`}
+                >
+                  {/* Number Circle + Mint Rounded Icon Box */}
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <span className="w-7 h-7 rounded-full bg-[#E6F4EC] text-[#14533C] text-[12.5px] font-bold flex items-center justify-center shrink-0">
+                      {item.number}
+                    </span>
 
-                  <div className="w-12 h-12 rounded-xl bg-[#EAF6EF] text-[#156847] flex items-center justify-center shrink-0">
-                    {renderMechanismIcon(item.icon)}
+                    <div className="w-12 h-12 rounded-xl bg-[#EAF6EF] text-[#156847] flex items-center justify-center shrink-0">
+                      {renderMechanismIcon(item.icon)}
+                    </div>
                   </div>
-                </div>
 
-                <h3 className="font-bold text-[16.5px] text-[#111827] mb-2 leading-snug">
-                  {item.title}
-                </h3>
+                  <h3 className="font-bold text-[16.5px] text-[#111827] mb-2 leading-snug">
+                    {item.title}
+                  </h3>
 
-                <p className="text-[13px] text-[#374151] leading-[1.58]">
-                  {item.description}
-                </p>
-              </div>
-            ))}
+                  <p className="text-[13px] text-[#374151] leading-[1.58]">
+                    {item.description}
+                  </p>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -1,24 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { PayPalCheckoutButton } from '../components/PayPalCheckoutButton';
-import { api } from '../api/client';
-import { Workshop, ReservationQuote, Reservation } from '../types';
+import { api, useSyncRefresh } from '../api/client';
+import { Workshop, ReservationQuote, Reservation, RewardsDashboard } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { 
-  Calendar, Clock, Users, ShieldCheck, Tag, CheckCircle2, 
-  ArrowLeft, Sparkles, BookOpen, AlertCircle, X, Check
+  ArrowLeft, AlertCircle, X, CheckCircle2, Loader2
 } from 'lucide-react';
 
 export const WorkshopDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const [workshop, setWorkshop] = useState<Workshop | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Quote State
+  // Authoritative Quote & Reward Controls State
+  const [rewardsInfo, setRewardsInfo] = useState<RewardsDashboard | null>(null);
+  const [applyPromotions, setApplyPromotions] = useState(true);
   const [useStoreCredit, setUseStoreCredit] = useState(false);
   const [quote, setQuote] = useState<ReservationQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -26,24 +27,49 @@ export const WorkshopDetail: React.FC = () => {
   // Reservation & Modal State
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [activeReservation, setActiveReservation] = useState<Reservation | null>(null);
+  const [holdLoading, setHoldLoading] = useState(false);
+  const [holdError, setHoldError] = useState<string | null>(null);
+  const [captureInFlight, setCaptureInFlight] = useState(false);
   const [confirmedCapture, setConfirmedCapture] = useState<any | null>(null);
 
-  useEffect(() => {
-    async function loadWorkshop() {
-      if (!id) return;
-      try {
-        const data = await api.getWorkshop(id);
-        setWorkshop(data);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load workshop details.');
-      } finally {
-        setLoading(false);
-      }
+  const loadWorkshop = useCallback(async () => {
+    if (!id) return;
+    try {
+      const data = await api.getWorkshop(id);
+      setWorkshop(data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load workshop details.');
+    } finally {
+      setLoading(false);
     }
-    loadWorkshop();
   }, [id]);
 
-  // Recalculate Quote whenever options change
+  const loadRewards = useCallback(async () => {
+    if (!isAuthenticated) {
+      setRewardsInfo(null);
+      return;
+    }
+    try {
+      const r = await api.getMyRewards();
+      setRewardsInfo(r);
+    } catch {
+      // Ignore if non-learner role
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    loadWorkshop();
+  }, [loadWorkshop]);
+
+  useEffect(() => {
+    loadRewards();
+  }, [loadRewards]);
+
+  useSyncRefresh(['workshops', 'reservations'], loadWorkshop);
+  useSyncRefresh(['rewards'], loadRewards);
+
+  // Recalculate authoritative server quote whenever reward toggles change
   useEffect(() => {
     async function fetchQuote() {
       if (!id || !isAuthenticated) return;
@@ -51,6 +77,7 @@ export const WorkshopDetail: React.FC = () => {
       try {
         const q = await api.getQuote({
           workshop_id: id,
+          campaign_ids: applyPromotions ? undefined : ['__none__'],
           use_store_credit: useStoreCredit,
         });
         setQuote(q);
@@ -61,24 +88,62 @@ export const WorkshopDetail: React.FC = () => {
       }
     }
     fetchQuote();
-  }, [id, isAuthenticated, useStoreCredit]);
+  }, [id, isAuthenticated, applyPromotions, useStoreCredit]);
 
-  const handleOpenReservationModal = async () => {
-    if (!isAuthenticated) {
-      navigate('/sign-in');
-      return;
-    }
-    setShowConfirmModal(true);
-    if (!activeReservation && id) {
+  // Synchronize pending reservation quote on server when modal is open and reward toggles change
+  const syncReservationHold = useCallback(
+    async (promoEnabled: boolean, creditEnabled: boolean) => {
+      if (!id) return;
+      setHoldLoading(true);
+      setHoldError(null);
       try {
         const res = await api.createReservation({
           workshop_id: id,
-          use_store_credit: useStoreCredit,
+          campaign_ids: promoEnabled ? undefined : ['__none__'],
+          use_store_credit: creditEnabled,
         });
         setActiveReservation(res);
       } catch (err: any) {
-        console.error('Hold reservation error', err);
+        setHoldError(err.message || 'Could not place seat hold for this workshop.');
+      } finally {
+        setHoldLoading(false);
       }
+    },
+    [id]
+  );
+
+  // Close modal on Escape when not actively capturing PayPal order
+  useEffect(() => {
+    if (!showConfirmModal) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !captureInFlight) {
+        setShowConfirmModal(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showConfirmModal, captureInFlight]);
+
+  const handleOpenReservationModal = async () => {
+    if (!isAuthenticated) {
+      navigate(`/sign-in?redirect=${encodeURIComponent(`/workshops/${id}`)}`);
+      return;
+    }
+    setShowConfirmModal(true);
+    await syncReservationHold(applyPromotions, useStoreCredit);
+  };
+
+  const handleTogglePromotions = async (checked: boolean) => {
+    setApplyPromotions(checked);
+    if (showConfirmModal) {
+      await syncReservationHold(checked, useStoreCredit);
+    }
+  };
+
+  const handleToggleStoreCredit = async (checked: boolean) => {
+    setUseStoreCredit(checked);
+    if (showConfirmModal) {
+      await syncReservationHold(applyPromotions, checked);
     }
   };
 
@@ -112,13 +177,37 @@ export const WorkshopDetail: React.FC = () => {
     minute: '2-digit'
   });
 
+  const compactModalDate = new Date(workshop.scheduled_at).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const instructorDisplayName =
+    workshop.merchant_name ||
+    (workshop.category === 'MLOps'
+      ? 'Sarah El Amrani'
+      : workshop.category === 'React + FastAPI'
+        ? 'Omar Belkacem'
+        : 'Fatima Zahra');
+
+  const storeCreditAvailableCents = rewardsInfo?.store_credit_cents || 0;
   const basePriceDollars = (workshop.price_cents / 100).toFixed(2);
-  const payableDollars = quote 
-    ? (quote.final_amount_cents / 100).toFixed(2)
-    : basePriceDollars;
-  const discountDollars = quote 
-    ? ((quote.base_price_cents - quote.final_amount_cents) / 100).toFixed(2)
-    : '10.00';
+  const effectiveFinalCents = activeReservation && showConfirmModal
+    ? activeReservation.final_amount_cents
+    : quote
+      ? quote.final_amount_cents
+      : workshop.price_cents;
+  const payableDollars = (effectiveFinalCents / 100).toFixed(2);
+  const discountCents = quote
+    ? Math.max(quote.base_price_cents - quote.final_amount_cents, 0)
+    : 0;
+  const discountDollars = (discountCents / 100).toFixed(2);
+  const promoDiscountCents = quote
+    ? quote.rewards_applied.reduce((acc, r) => acc + r.discount_cents, 0)
+    : 0;
 
   return (
     <div className="bg-ivory min-h-screen py-10">
@@ -161,7 +250,7 @@ export const WorkshopDetail: React.FC = () => {
 
             <Link
               to="/app/reservations"
-              className="inline-flex items-center justify-center w-full py-3 rounded-xl bg-forest text-ivory text-xs font-semibold shadow-xs"
+              className="nv-btn-press inline-flex items-center justify-center w-full py-3 rounded-xl bg-forest text-ivory text-xs font-semibold shadow-xs"
             >
               View My Reservations & Tickets →
             </Link>
@@ -237,18 +326,51 @@ export const WorkshopDetail: React.FC = () => {
                   <span>Base Price</span>
                   <span className="font-mono">${basePriceDollars} USD</span>
                 </div>
-                <div className="flex justify-between text-forest font-medium">
-                  <span>Welcome Discount</span>
-                  <span className="font-mono">-${discountDollars} USD</span>
-                </div>
+                {isAuthenticated && quote ? (
+                  <>
+                    {quote.rewards_applied.map((rw) => (
+                      <div key={rw.campaign_id} className="flex justify-between text-forest font-medium">
+                        <span>{rw.campaign_name}</span>
+                        <span className="font-mono">-${(rw.discount_cents / 100).toFixed(2)} USD</span>
+                      </div>
+                    ))}
+                    {quote.store_credit_applied_cents > 0 && (
+                      <div className="flex justify-between text-forest font-medium">
+                        <span>Store Credit Applied</span>
+                        <span className="font-mono">
+                          -${(quote.store_credit_applied_cents / 100).toFixed(2)} USD
+                        </span>
+                      </div>
+                    )}
+                    {storeCreditAvailableCents > 0 && (
+                      <label className="flex items-center justify-between pt-2 border-t border-warmgray/60 cursor-pointer select-none">
+                        <span className="text-charcoal font-medium">
+                          Apply Store Credit (${(storeCreditAvailableCents / 100).toFixed(2)} available)
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={useStoreCredit}
+                          onChange={(e) => handleToggleStoreCredit(e.target.checked)}
+                          className="rounded text-forest focus:ring-forest cursor-pointer"
+                        />
+                      </label>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex justify-between text-forest font-medium">
+                    <span>Welcome &amp; Early-Bird Eligible</span>
+                    <span className="font-mono">Verified at checkout</span>
+                  </div>
+                )}
               </div>
 
               <button
                 type="button"
                 onClick={handleOpenReservationModal}
-                disabled={workshop.remaining_seats <= 0}
-                className="w-full py-3 rounded-xl bg-[#205C49] hover:bg-charcoal text-white text-xs font-semibold transition-all shadow-xs flex items-center justify-center gap-1.5"
+                disabled={workshop.remaining_seats <= 0 || quoteLoading}
+                className="nv-btn-press w-full py-3 rounded-xl bg-[#205C49] hover:bg-charcoal disabled:opacity-60 text-white text-xs font-semibold transition-all shadow-xs flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
               >
+                {quoteLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 <span>{workshop.remaining_seats > 0 ? 'Reserve Seat with PayPal' : 'Workshop Fully Booked'}</span>
               </button>
 
@@ -261,16 +383,33 @@ export const WorkshopDetail: React.FC = () => {
 
         {/* Modal: Confirm Your Reservation matching exact Bottom-Right mock */}
         {showConfirmModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/60 backdrop-blur-xs">
-            <div className="bg-white rounded-3xl border border-warmgray max-w-4xl w-full p-6 sm:p-8 shadow-2xl space-y-6 relative">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/60 backdrop-blur-xs"
+            onClick={() => {
+              if (!captureInFlight) setShowConfirmModal(false);
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="confirm-reservation-title"
+              onClick={(e) => e.stopPropagation()}
+              className="nv-stage-panel bg-white rounded-3xl border border-warmgray max-w-4xl w-full p-6 sm:p-8 shadow-2xl space-y-6 relative"
+            >
               {/* Modal Header */}
               <div className="flex items-center justify-between pb-4 border-b border-warmgray">
-                <h3 className="font-semibold text-lg sm:text-xl text-charcoal font-serif">
+                <h3
+                  id="confirm-reservation-title"
+                  className="font-semibold text-lg sm:text-xl text-charcoal font-serif"
+                >
                   Confirm Your Reservation
                 </h3>
                 <button
+                  type="button"
+                  disabled={captureInFlight}
+                  aria-label="Close reservation dialog"
                   onClick={() => setShowConfirmModal(false)}
-                  className="p-1.5 rounded-lg text-charcoal/50 hover:bg-warmgray/50 transition-colors"
+                  className="nv-btn-press p-1.5 rounded-lg text-charcoal/50 hover:bg-warmgray/50 disabled:opacity-40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -285,7 +424,7 @@ export const WorkshopDetail: React.FC = () => {
                       {workshop.title}
                     </h4>
                     <p className="text-xs text-charcoal/60 font-mono">
-                      Nov 11, 2026, 08:15 PM
+                      {compactModalDate}
                     </p>
                   </div>
 
@@ -296,33 +435,66 @@ export const WorkshopDetail: React.FC = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-charcoal/50">Instructor:</span>
-                      <span>Fatima Zahra</span>
+                      <span>{instructorDisplayName}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-charcoal/50">Seats:</span>
-                      <span>1</span>
+                      <span>1 ({workshop.remaining_seats} left)</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Column 2: Apply Rewards & Price Breakdown */}
                 <div className="bg-ivory/80 rounded-2xl p-5 border border-warmgray space-y-4 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <span className="text-[11px] font-mono uppercase text-charcoal/60 font-semibold block">
-                      Apply Rewards
-                    </span>
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-mono uppercase text-charcoal/60 font-semibold">
+                        Apply Rewards
+                      </span>
+                      {(quoteLoading || holdLoading) && (
+                        <Loader2 className="w-3.5 h-3.5 text-forest animate-spin" />
+                      )}
+                    </div>
 
                     <label className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-forest/30 cursor-pointer text-xs">
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          defaultChecked
-                          className="rounded text-forest focus:ring-forest"
+                          checked={applyPromotions}
+                          disabled={captureInFlight}
+                          onChange={(e) => handleTogglePromotions(e.target.checked)}
+                          className="rounded text-forest focus:ring-forest cursor-pointer"
                         />
-                        <span className="font-semibold text-charcoal">Welcome Discount</span>
+                        <span className="font-semibold text-charcoal">
+                          Merchant Promotions
+                        </span>
                       </div>
-                      <span className="font-mono font-bold text-forest">-$10.00</span>
+                      <span className="font-mono font-bold text-forest">
+                        {promoDiscountCents > 0
+                          ? `-$${(promoDiscountCents / 100).toFixed(2)}`
+                          : applyPromotions
+                            ? 'Auto'
+                            : '$0.00'}
+                      </span>
                     </label>
+
+                    {storeCreditAvailableCents > 0 && (
+                      <label className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-forest/30 cursor-pointer text-xs">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={useStoreCredit}
+                            disabled={captureInFlight}
+                            onChange={(e) => handleToggleStoreCredit(e.target.checked)}
+                            className="rounded text-forest focus:ring-forest cursor-pointer"
+                          />
+                          <span className="font-semibold text-charcoal">Store Credit</span>
+                        </div>
+                        <span className="font-mono font-bold text-forest">
+                          ${(storeCreditAvailableCents / 100).toFixed(2)} bal
+                        </span>
+                      </label>
+                    )}
                   </div>
 
                   <div className="space-y-1.5 text-xs pt-3 border-t border-warmgray/60">
@@ -331,7 +503,7 @@ export const WorkshopDetail: React.FC = () => {
                       <span className="font-mono">${basePriceDollars}</span>
                     </div>
                     <div className="flex justify-between text-forest font-medium">
-                      <span>Discount</span>
+                      <span>Verified Savings</span>
                       <span className="font-mono">-${discountDollars}</span>
                     </div>
                     <div className="pt-2 border-t border-warmgray flex justify-between font-bold text-sm text-charcoal">
@@ -361,20 +533,41 @@ export const WorkshopDetail: React.FC = () => {
                   </div>
 
                   <div className="space-y-2 pt-2">
-                    {activeReservation ? (
+                    {holdError ? (
+                      <div className="space-y-2">
+                        <div
+                          role="alert"
+                          className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700"
+                        >
+                          {holdError}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => syncReservationHold(applyPromotions, useStoreCredit)}
+                          className="nv-btn-press w-full py-2 px-3 rounded-xl bg-forest text-ivory text-xs font-semibold"
+                        >
+                          Retry Seat Hold
+                        </button>
+                      </div>
+                    ) : activeReservation ? (
                       <PayPalCheckoutButton
                         reservationId={activeReservation.id}
                         finalAmountCents={activeReservation.final_amount_cents}
                         currency={activeReservation.currency}
                         workshopTitle={workshop.title}
+                        disabled={holdLoading || quoteLoading}
+                        onProcessingChange={setCaptureInFlight}
                         onSuccess={(data) => {
                           setConfirmedCapture(data);
                           setShowConfirmModal(false);
+                          loadWorkshop();
+                          loadRewards();
                         }}
                       />
                     ) : (
-                      <div className="py-2.5 px-4 bg-[#0070BA] text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5">
-                        <span>Pay with PayPal</span>
+                      <div className="py-3 px-4 bg-[#0070BA]/80 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Placing 15-min Seat Hold...</span>
                       </div>
                     )}
 

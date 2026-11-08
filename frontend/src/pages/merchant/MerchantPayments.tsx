@@ -1,17 +1,35 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../../api/client';
-import { CreditCard, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { api, useSyncRefresh } from '../../api/client';
+import { CreditCard, Copy, Check } from 'lucide-react';
 
 export const MerchantPayments: React.FC = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await api.getPaymentTransactions();
+      setPayments(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    api.getPaymentTransactions()
-      .then(setPayments)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+    load();
+  }, [load]);
+
+  useSyncRefresh(['reservations', 'analytics'], load);
+
+  const handleCopyCapture = (id: string, captureId: string) => {
+    if (!captureId) return;
+    navigator.clipboard?.writeText(captureId).catch(() => {});
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1800);
+  };
 
   return (
     <>
@@ -51,7 +69,7 @@ export const MerchantPayments: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-warmgray/60 font-medium">
                   {payments.map((p) => (
-                    <tr key={p.id} className="hover:bg-ivory/50">
+                    <tr key={p.id} className="nv-row-hover hover:bg-ivory/50">
                       <td className="py-3 px-4 font-mono text-[11px] text-charcoal/60">
                         {p.id.slice(0, 8)}...
                       </td>
@@ -59,7 +77,19 @@ export const MerchantPayments: React.FC = () => {
                         {p.paypal_order_id}
                       </td>
                       <td className="py-3 px-4 font-mono text-[11px] text-forest font-semibold">
-                        {p.paypal_capture_id}
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCapture(p.id, p.paypal_capture_id)}
+                          title="Copy PayPal Capture ID"
+                          className="inline-flex items-center gap-1 hover:underline focus-visible:outline-none"
+                        >
+                          <span>{p.paypal_capture_id}</span>
+                          {copiedId === p.id ? (
+                            <Check className="w-3 h-3 text-forest" />
+                          ) : (
+                            <Copy className="w-3 h-3 text-charcoal/35" />
+                          )}
+                        </button>
                       </td>
                       <td className="py-3 px-4 text-charcoal">{p.buyer_name}</td>
                       <td className="py-3 px-4 text-charcoal/80 max-w-xs truncate">{p.workshop_title}</td>
@@ -93,4 +123,3 @@ export const MerchantPayments: React.FC = () => {
     </>
   );
 };
-

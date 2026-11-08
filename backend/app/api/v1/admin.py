@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
+from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.models.entities import User, AuditLog
 from app.schemas.auth import UserResponse
@@ -14,7 +15,11 @@ async def list_all_users(
     admin: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(User).order_by(desc(User.created_at))
+    stmt = (
+        select(User)
+        .options(selectinload(User.profile), selectinload(User.merchant_profile))
+        .order_by(desc(User.created_at))
+    )
     result = await db.execute(stmt)
     return result.scalars().all()
 

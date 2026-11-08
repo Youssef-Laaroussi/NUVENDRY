@@ -1,18 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { AGGridDemandTable } from '../../components/AGGridDemandTable';
-import { api } from '../../api/client';
+import { api, useSyncRefresh } from '../../api/client';
 import { DemandCluster } from '../../types';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Loader2, Layers, RefreshCw } from 'lucide-react';
+import { Loader2, Layers, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const DemandIntelligence: React.FC = () => {
   const navigate = useNavigate();
   const [clusters, setClusters] = useState<DemandCluster[]>([]);
   const [loading, setLoading] = useState(true);
   const [clustering, setClustering] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const fetchClusters = async () => {
-    setLoading(true);
+  const fetchClusters = useCallback(async () => {
     try {
       const data = await api.getClusters();
       setClusters(data);
@@ -21,26 +21,37 @@ export const DemandIntelligence: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchClusters();
-  }, []);
+  }, [fetchClusters]);
+
+  useSyncRefresh(['clusters', 'demands'], fetchClusters);
 
   const handleRunClustering = async () => {
+    if (clustering) return;
     setClustering(true);
+    setFeedback(null);
     try {
       const results = await api.matchDemands();
       setClusters(results);
-    } catch (err) {
-      console.error('Clustering failed', err);
+      setFeedback({
+        type: 'success',
+        message: `AI clustering finished: ${results.length} constraint-validated opportunity clusters synchronized.`,
+      });
+    } catch (err: any) {
+      setFeedback({
+        type: 'error',
+        message: err.message || 'AI clustering run failed.',
+      });
     } finally {
       setClustering(false);
     }
   };
 
-  const handleGenerateOffer = async (clusterId: string) => {
-    navigate(`/merchant/offer-studio?cluster_id=${clusterId}`);
+  const handleGenerateOffer = (clusterId: string) => {
+    navigate(`/merchant/offer-studio?cluster_id=${encodeURIComponent(clusterId)}`);
   };
 
   return (
@@ -58,18 +69,37 @@ export const DemandIntelligence: React.FC = () => {
           </div>
 
           <button
+            type="button"
             onClick={handleRunClustering}
             disabled={clustering}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-forest text-ivory text-xs font-semibold hover:bg-charcoal transition-colors shrink-0 shadow-xs"
+            className="nv-btn-press inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-forest text-ivory text-xs font-semibold hover:bg-charcoal disabled:opacity-60 transition-colors shrink-0 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
           >
             {clustering ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
               <RefreshCw className="w-3.5 h-3.5" />
             )}
-            <span>Re-cluster Demands</span>
+            <span>{clustering ? 'Clustering...' : 'Re-cluster Demands'}</span>
           </button>
         </div>
+
+        {feedback && (
+          <div
+            role={feedback.type === 'error' ? 'alert' : 'status'}
+            className={`p-3.5 rounded-xl border text-xs flex items-center gap-2 ${
+              feedback.type === 'error'
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-mint/50 border-forest/20 text-forest font-medium'
+            }`}
+          >
+            {feedback.type === 'error' ? (
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-forest" />
+            )}
+            <span>{feedback.message}</span>
+          </div>
+        )}
 
         {/* AG Grid Operational Table */}
         <div className="bg-white rounded-2xl border border-warmgray p-6 space-y-4 shadow-xs">
@@ -96,4 +126,3 @@ export const DemandIntelligence: React.FC = () => {
     </>
   );
 };
-

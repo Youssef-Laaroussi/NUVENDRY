@@ -5,7 +5,7 @@ from sqlalchemy import select, func, desc
 from app.core.database import get_db
 from app.models.entities import (
     User, StoreCredit, DigitalGift, ReferralEvent, 
-    Reservation, AttendanceRecord
+    Reservation, AttendanceRecord, RewardLedger, RewardCampaign
 )
 from app.schemas.reward import StoreCreditResponse, DigitalGiftResponse, ReferralResponse
 from app.api.deps import get_current_user
@@ -73,6 +73,21 @@ async def get_my_rewards_dashboard(
             "unlocked": True
         })
         
+    ledger_stmt = (
+        select(RewardLedger)
+        .where(RewardLedger.user_id == user.id)
+        .order_by(desc(RewardLedger.created_at))
+        .limit(20)
+    )
+    ledger_entries = (await db.execute(ledger_stmt)).scalars().all()
+
+    camp_stmt = (
+        select(RewardCampaign)
+        .where(RewardCampaign.is_active == True, RewardCampaign.remaining_budget_cents > 0)
+        .order_by(desc(RewardCampaign.created_at))
+    )
+    active_campaigns = (await db.execute(camp_stmt)).scalars().all()
+
     return {
         "store_credit_cents": balance_cents,
         "currency": "USD",
@@ -87,7 +102,30 @@ async def get_my_rewards_dashboard(
             for g in gifts
         ],
         "achievement_badges": badges,
-        "first_purchase_eligible": confirmed_count == 0
+        "first_purchase_eligible": confirmed_count == 0,
+        "ledger": [
+            {
+                "id": entry.id,
+                "entry_type": entry.entry_type,
+                "amount_cents": entry.amount_cents,
+                "currency": entry.currency,
+                "description": entry.description,
+                "created_at": entry.created_at,
+            }
+            for entry in ledger_entries
+        ],
+        "available_campaigns": [
+            {
+                "id": c.id,
+                "merchant_id": c.merchant_id,
+                "name": c.name,
+                "campaign_type": c.campaign_type,
+                "discount_amount_cents": c.discount_amount_cents,
+                "discount_percentage": c.discount_percentage,
+                "min_spend_cents": c.min_spend_cents,
+            }
+            for c in active_campaigns
+        ]
     }
 
 @router.get("/referrals/me", response_model=ReferralResponse)

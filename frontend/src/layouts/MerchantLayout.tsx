@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -25,6 +25,19 @@ export const MerchantLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileMenuOpen]);
 
   const getPageTitle = () => {
     const active = MERCHANT_NAV.find((item) => item.path === location.pathname);
@@ -75,7 +88,7 @@ export const MerchantLayout: React.FC = () => {
 
           <Link
             to="/merchant/offer-studio"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-forest text-ivory text-xs font-semibold hover:bg-charcoal transition-colors shadow-xs"
+            className="nv-btn-press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-forest text-ivory text-xs font-semibold hover:bg-charcoal transition-colors shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
           >
             <Sparkles className="w-3.5 h-3.5 text-gold" />
             <span className="hidden sm:inline">AI Offer Studio</span>
@@ -103,8 +116,9 @@ export const MerchantLayout: React.FC = () => {
               logout();
               navigate('/');
             }}
-            className="p-1.5 rounded-lg text-charcoal/60 hover:text-charcoal hover:bg-warmgray/60 transition-colors"
+            className="nv-btn-press p-1.5 rounded-lg text-charcoal/60 hover:text-charcoal hover:bg-warmgray/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
             title="Sign Out"
+            aria-label="Sign Out"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -126,7 +140,8 @@ export const MerchantLayout: React.FC = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest ${
                   isActive
                     ? 'bg-mint text-forest font-semibold shadow-xs'
                     : 'text-charcoal/70 hover:bg-ivory hover:text-charcoal'

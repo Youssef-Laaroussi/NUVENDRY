@@ -3,8 +3,8 @@ from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from app.models.entities import (
-    User, Workshop, RewardCampaign, RewardRedemption, 
-    StoreCredit, RewardLedger, DigitalGift, ReferralEvent, AttendanceRecord
+    User, MerchantProfile, Workshop, RewardCampaign, RewardRedemption, 
+    StoreCredit, RewardLedger, DigitalGift, ReferralEvent, AttendanceRecord, Reservation
 )
 
 class RewardEngine:
@@ -67,12 +67,17 @@ class RewardEngine:
             
             # Reward 1: Welcome Discount
             if campaign.campaign_type == "welcome":
-                # Verify if user has ANY confirmed reservation previously
+                # Verify if user has ANY confirmed reservation or redemption previously
                 prior_res_stmt = select(func.count(RewardRedemption.id)).where(
                     RewardRedemption.user_id == user.id
                 )
                 prior_res = (await db.execute(prior_res_stmt)).scalar() or 0
-                if prior_res == 0:
+                confirmed_stmt = select(func.count(Reservation.id)).where(
+                    Reservation.user_id == user.id,
+                    Reservation.status == "confirmed"
+                )
+                prior_confirmed = (await db.execute(confirmed_stmt)).scalar() or 0
+                if prior_res == 0 and prior_confirmed == 0:
                     if campaign.discount_amount_cents > 0:
                         discount = campaign.discount_amount_cents
                     elif campaign.discount_percentage > 0:
@@ -187,10 +192,42 @@ class RewardEngine:
         - Reward 6: Achievement Badges
         """
         # Reward 4: Deliver Digital Gift materials
+        gift_campaign_id = "system-gift-campaign"
+        gift_title = "Interactive Workshop Starter Kit & Production Code Repo"
+        workshop = await db.get(Workshop, workshop_id)
+        if workshop:
+            gift_title = f"{workshop.title} — Starter Kit & Code Repo"
+            gift_camp_stmt = select(RewardCampaign).where(
+                RewardCampaign.merchant_id == workshop.merchant_id,
+                RewardCampaign.campaign_type == "digital_gift",
+                RewardCampaign.is_active == True
+            )
+            gift_camp = (await db.execute(gift_camp_stmt)).scalars().first()
+            if gift_camp:
+                gift_campaign_id = gift_camp.id
+            else:
+                merchant_exists = await db.get(MerchantProfile, workshop.merchant_id)
+                if merchant_exists:
+                    auto_gift_camp = RewardCampaign(
+                        merchant_id=workshop.merchant_id,
+                        name="Workshop Starter Kit & Digital Resources",
+                        campaign_type="digital_gift",
+                        discount_amount_cents=0,
+                        discount_percentage=0,
+                        min_spend_cents=0,
+                        total_budget_cents=100000,
+                        remaining_budget_cents=100000,
+                        max_per_user=10,
+                        is_active=True
+                    )
+                    db.add(auto_gift_camp)
+                    await db.flush()
+                    gift_campaign_id = auto_gift_camp.id
+
         gift = DigitalGift(
-            campaign_id="system-gift-campaign",
+            campaign_id=gift_campaign_id,
             user_id=user_id,
-            title="Interactive Workshop Starter Kit & Production Code Repo",
+            title=gift_title,
             download_url=f"/api/v1/workshops/{workshop_id}/materials",
             access_code=f"NV-GIFT-{reservation_id[:8].upper()}"
         )

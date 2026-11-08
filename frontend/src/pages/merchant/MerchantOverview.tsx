@@ -1,34 +1,34 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../../api/client';
+import React, { useEffect, useState, useCallback } from 'react';
+import { api, useSyncRefresh } from '../../api/client';
 import { AnalyticsOverview } from '../../types';
 import { Link } from 'react-router-dom';
 import { 
   CreditCard, BookOpen, Users, Layers, Tag, Sparkles, 
-  ArrowRight, ShieldCheck, CheckCircle2 
+  ShieldCheck, CheckCircle2 
 } from 'lucide-react';
 
 export const MerchantOverview: React.FC = () => {
   const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      const [a, p] = await Promise.all([
+        api.getAnalyticsOverview(),
+        api.getPaymentTransactions(),
+      ]);
+      setAnalytics(a);
+      setPayments(p);
+    } catch (err) {
+      console.error('Failed to load merchant overview', err);
+    }
+  }, []);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [a, p] = await Promise.all([
-          api.getAnalyticsOverview(),
-          api.getPaymentTransactions(),
-        ]);
-        setAnalytics(a);
-        setPayments(p);
-      } catch (err) {
-        console.error('Failed to load merchant overview', err);
-      } finally {
-        setLoading(false);
-      }
-    }
     load();
-  }, []);
+  }, [load]);
+
+  useSyncRefresh(['analytics', 'workshops', 'reservations', 'clusters', 'rewards'], load);
 
   return (
     <>
@@ -46,7 +46,7 @@ export const MerchantOverview: React.FC = () => {
           </div>
           <Link
             to="/merchant/offer-studio"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-forest text-ivory text-xs font-semibold hover:bg-charcoal transition-colors shrink-0 shadow-xs"
+            className="nv-btn-press inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-forest text-ivory text-xs font-semibold hover:bg-charcoal transition-colors shrink-0 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
           >
             <Sparkles className="w-3.5 h-3.5 text-gold" />
             <span>AI Offer Studio</span>
@@ -55,7 +55,10 @@ export const MerchantOverview: React.FC = () => {
 
         {/* 6 Key Operational Metrics */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-warmgray space-y-1">
+          <Link
+            to="/merchant/payments"
+            className="nv-card-lift bg-white p-5 rounded-2xl border border-warmgray space-y-1 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+          >
             <span className="text-[11px] font-medium text-charcoal/60 flex items-center gap-1">
               <CreditCard className="w-3.5 h-3.5 text-forest" /> Confirmed Volume
             </span>
@@ -63,9 +66,12 @@ export const MerchantOverview: React.FC = () => {
               ${((analytics?.total_revenue_cents || 0) / 100).toFixed(2)} USD
             </div>
             <p className="text-[10px] text-charcoal/50">PayPal Sandbox Captures</p>
-          </div>
+          </Link>
 
-          <div className="bg-white p-5 rounded-2xl border border-warmgray space-y-1">
+          <Link
+            to="/merchant/reservations"
+            className="nv-card-lift bg-white p-5 rounded-2xl border border-warmgray space-y-1 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+          >
             <span className="text-[11px] font-medium text-charcoal/60 flex items-center gap-1">
               <Users className="w-3.5 h-3.5 text-forest" /> Verified Bookings
             </span>
@@ -75,9 +81,12 @@ export const MerchantOverview: React.FC = () => {
             <p className="text-[10px] text-charcoal/50">
               {analytics?.conversion_rate_percentage || 0}% Conversion Rate
             </p>
-          </div>
+          </Link>
 
-          <div className="bg-white p-5 rounded-2xl border border-warmgray space-y-1">
+          <Link
+            to="/merchant/workshops"
+            className="nv-card-lift bg-white p-5 rounded-2xl border border-warmgray space-y-1 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+          >
             <span className="text-[11px] font-medium text-charcoal/60 flex items-center gap-1">
               <BookOpen className="w-3.5 h-3.5 text-forest" /> Published Workshops
             </span>
@@ -85,9 +94,12 @@ export const MerchantOverview: React.FC = () => {
               {analytics?.published_workshops || 0}
             </div>
             <p className="text-[10px] text-charcoal/50">Active in Marketplace</p>
-          </div>
+          </Link>
 
-          <div className="bg-white p-5 rounded-2xl border border-warmgray space-y-1">
+          <Link
+            to="/merchant/demand-intelligence"
+            className="nv-card-lift bg-white p-5 rounded-2xl border border-warmgray space-y-1 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+          >
             <span className="text-[11px] font-medium text-charcoal/60 flex items-center gap-1">
               <Layers className="w-3.5 h-3.5 text-forest" /> Demand Opportunities
             </span>
@@ -95,9 +107,12 @@ export const MerchantOverview: React.FC = () => {
               {analytics?.active_clusters || 0}
             </div>
             <p className="text-[10px] text-charcoal/50">Clustered from {analytics?.total_demands || 0} requests</p>
-          </div>
+          </Link>
 
-          <div className="bg-white p-5 rounded-2xl border border-warmgray space-y-1">
+          <Link
+            to="/merchant/reward-studio"
+            className="nv-card-lift bg-white p-5 rounded-2xl border border-warmgray space-y-1 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+          >
             <span className="text-[11px] font-medium text-charcoal/60 flex items-center gap-1">
               <Tag className="w-3.5 h-3.5 text-forest" /> Rewards Redeemed
             </span>
@@ -105,8 +120,9 @@ export const MerchantOverview: React.FC = () => {
               ${((analytics?.total_rewards_redeemed_cents || 0) / 100).toFixed(2)}
             </div>
             <p className="text-[10px] text-charcoal/50">Merchant-Funded Budget Used</p>
-          </div>
+          </Link>
 
+          {/* Informational card stays non-clickable per Section 3 */}
           <div className="bg-white p-5 rounded-2xl border border-warmgray space-y-1">
             <span className="text-[11px] font-medium text-charcoal/60 flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-forest" /> Sandbox Status
@@ -143,7 +159,7 @@ export const MerchantOverview: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-warmgray/60 font-medium">
                   {payments.slice(0, 5).map((p) => (
-                    <tr key={p.id} className="hover:bg-ivory/50">
+                    <tr key={p.id} className="nv-row-hover hover:bg-ivory/50">
                       <td className="py-3 px-3 text-charcoal">{p.buyer_name}</td>
                       <td className="py-3 px-3 text-charcoal/80 max-w-xs truncate">{p.workshop_title}</td>
                       <td className="py-3 px-3 font-mono font-semibold text-forest">
@@ -170,4 +186,3 @@ export const MerchantOverview: React.FC = () => {
     </>
   );
 };
-

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Workshop } from '../types';
 import { Calendar, Clock, Users, Gift, Info, ArrowRight } from 'lucide-react';
 import workshopMlopsImg from '../assets/workshop-mlops.jpg';
@@ -11,6 +12,7 @@ interface WorkshopCardProps {
 }
 
 export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop }) => {
+  const [showRewardNote, setShowRewardNote] = useState(false);
   const formattedDate = new Date(workshop.scheduled_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -82,17 +84,25 @@ export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop }) => {
     : `/workshops/${workshop.id}`;
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E5ECE7] p-5 shadow-[0_6px_26px_rgba(15,41,30,0.055)] hover:shadow-[0_12px_32px_rgba(15,41,30,0.09)] transition-all flex flex-col justify-between group">
+    <motion.div
+      whileHover={{ y: -6, transition: { type: 'spring', stiffness: 350, damping: 22 } }}
+      className="bg-white rounded-2xl border border-[#E5ECE7] p-5 shadow-[0_6px_26px_rgba(15,41,30,0.055)] hover:shadow-[0_14px_34px_rgba(15,41,30,0.11)] transition-all flex flex-col justify-between group"
+    >
       <div>
         {/* Top Split: Rounded Left Thumbnail + Right Category/Price/Title/Description */}
         <div className="flex items-start gap-4">
-          <div className="w-[114px] h-[132px] sm:w-[122px] sm:h-[140px] rounded-xl overflow-hidden shrink-0 bg-[#111827] shadow-2xs">
+          <Link
+            to={targetUrl}
+            tabIndex={-1}
+            aria-hidden="true"
+            className="w-[114px] h-[132px] sm:w-[122px] sm:h-[140px] rounded-xl overflow-hidden shrink-0 bg-[#111827] shadow-2xs block"
+          >
             <img
               src={meta.imageUrl}
               alt={meta.displayTitle}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
-          </div>
+          </Link>
 
           <div className="flex-1 min-w-0">
             {/* Category Pill & Price */}
@@ -112,7 +122,12 @@ export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop }) => {
 
             {/* Workshop Title */}
             <h3 className="font-bold text-[15px] sm:text-[15.5px] text-[#111827] group-hover:text-[#14533C] transition-colors leading-[1.28] mb-1.5">
-              {meta.displayTitle}
+              <Link
+                to={targetUrl}
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135A3E] rounded"
+              >
+                {meta.displayTitle}
+              </Link>
             </h3>
 
             {/* Workshop Summary */}
@@ -161,31 +176,56 @@ export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop }) => {
         </div>
 
         {/* Eligible Merchant-Funded Rewards Pill Banner */}
-        <div
-          className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#E8F5ED] text-[#134E3A] text-[11.5px] font-medium mb-3.5"
-          title="Eligible bookings receive automatic merchant-funded Welcome & Early-Bird discounts at PayPal Sandbox checkout."
+        <button
+          type="button"
+          aria-expanded={showRewardNote}
+          onClick={() => setShowRewardNote((prev) => !prev)}
+          className="w-full text-left flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#E8F5ED] hover:bg-[#DCF0E4] text-[#134E3A] text-[11.5px] font-medium mb-3.5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135A3E]"
+          title="Click to preview reward eligibility rules"
         >
           <span className="inline-flex items-center gap-2 min-w-0">
             <Gift className="w-3.5 h-3.5 text-[#165C45] shrink-0" />
             <span className="truncate">Eligible for Welcome &amp; Early-Bird Rewards</span>
           </span>
           <Info className="w-3.5 h-3.5 text-[#165C45] shrink-0" />
-        </div>
+        </button>
+
+        <AnimatePresence>
+          {showRewardNote && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+              className="overflow-hidden mb-3"
+            >
+              <div className="px-3 py-2 rounded-lg bg-[#F8FBF9] border border-[#DCE8E1] text-[11px] text-[#374151] leading-snug">
+                Merchant-funded 10% Welcome Discount, Early-Bird commitment savings, and local Store
+                Credit are evaluated on the server prior to PayPal Sandbox checkout.
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Full-Width Reserve Button */}
-        <Link
-          to={targetUrl}
-          className={`w-full py-2.5 px-4 rounded-xl text-[13.5px] font-semibold flex items-center justify-center gap-2 transition-all shadow-xs group/btn ${
-            isAvailable
-              ? 'bg-[#135A3E] hover:bg-[#0D432E] text-white'
-              : 'bg-warmgray text-charcoal/50 cursor-not-allowed pointer-events-none'
-          }`}
-        >
-          <span>Reserve</span>
-          <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
-        </Link>
+        <motion.div whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.97 }}>
+          <Link
+            to={targetUrl}
+            aria-disabled={!isAvailable}
+            className={`w-full py-2.5 px-4 rounded-xl text-[13.5px] font-semibold flex items-center justify-center gap-2 transition-all shadow-xs group/btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135A3E] focus-visible:ring-offset-2 ${
+              isAvailable
+                ? 'bg-[#135A3E] hover:bg-[#0D432E] text-white'
+                : 'bg-warmgray text-charcoal/50 cursor-not-allowed pointer-events-none'
+            }`}
+          >
+            <span>{isAvailable ? 'Reserve' : 'Sold Out'}</span>
+            {isAvailable && (
+              <ArrowRight className="w-4 h-4 nv-icon-slide" />
+            )}
+          </Link>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
