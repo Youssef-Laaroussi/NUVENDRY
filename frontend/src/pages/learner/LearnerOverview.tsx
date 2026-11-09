@@ -10,8 +10,8 @@ import {
 } from 'lucide-react';
 import { LearningDemand, Reservation, NotificationItem } from '../../types';
 
-// High-fidelity assets matching exact mockup
-import heroMountainClean from '../../assets/hero-mountain-clean.png';
+// High-fidelity AI-generated assets
+import heroMountainsAi from '../../assets/hero-mountains-ai.jpg';
 import activePathThumb from '../../assets/active-path-thumb.png';
 import workshopMlops from '../../assets/workshop-mlops.jpg';
 import workshopFullstack from '../../assets/workshop-fullstack.jpg';
@@ -22,7 +22,7 @@ import badgeActiveLearner from '../../assets/badge-active-learner.png';
 import badgeMlopsExplorer from '../../assets/badge-mlops-explorer.png';
 import badgeCommunityMember from '../../assets/badge-community-member.png';
 import advisorHills from '../../assets/advisor-hills.png';
-import milestoneMountainSeamless from '../../assets/milestone-mountain-seamless.png';
+import milestoneMountainsAi from '../../assets/milestone-mountains-ai.jpg';
 
 export const LearnerOverview: React.FC = () => {
   const { user } = useAuth();
@@ -207,10 +207,10 @@ export const LearnerOverview: React.FC = () => {
     <div className="space-y-3.5">
       {/* Notifications Drawer (Only shown when explicitly opened) */}
       {isNotificationsRoute && (
-        <div className="bg-white rounded-2xl border border-[#1E5743]/30 p-4 space-y-3 shadow-sm animate-in fade-in">
+        <div className="bg-white rounded-2xl border border-[#0E6636]/30 p-4 space-y-3 shadow-sm animate-in fade-in">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-[#1A2621] text-xs flex items-center gap-2">
-              <Bell className="w-4 h-4 text-[#1E5743]" /> Notifications Inbox
+              <Bell className="w-4 h-4 text-[#0E6636]" /> Notifications Inbox
             </h3>
             <span className="text-xs font-mono text-gray-400">
               {notifications.filter((n) => !n.is_read).length} unread
@@ -222,7 +222,7 @@ export const LearnerOverview: React.FC = () => {
                 <div
                   key={n.id}
                   className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-xs ${
-                    n.is_read ? 'bg-[#F4F6F4] border-[#E5E7E0]' : 'bg-[#EAF5EE] border-[#C5DFD0]'
+                    n.is_read ? 'bg-[#F6F8F7] border-[#E5E7E0]' : 'bg-[#EBF9EA] border-[#C5DFD0]'
                   }`}
                 >
                   <div>
@@ -234,7 +234,7 @@ export const LearnerOverview: React.FC = () => {
                       type="button"
                       disabled={markingId === n.id}
                       onClick={() => handleMarkRead(n.id)}
-                      className="px-2 py-1 rounded-lg bg-white border border-[#E5E7E0] text-[10px] font-medium text-[#1E5743] hover:bg-[#1E5743] hover:text-white transition-colors"
+                      className="px-2 py-1 rounded-lg bg-white border border-[#E5E7E0] text-[10px] font-medium text-[#0E6636] hover:bg-[#0E6636] hover:text-white transition-colors"
                     >
                       {markingId === n.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Mark read'}
                     </button>
@@ -255,13 +255,13 @@ export const LearnerOverview: React.FC = () => {
         <div className="flex-1 min-w-0 space-y-3.5 w-full">
           
           {/* 1. Hero Welcome Banner (Identical to reference mockup) */}
-          <div className="relative overflow-hidden bg-white rounded-2xl border border-[#E5E7E0] px-6 py-4.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between min-h-[92px]">
-            {/* Right Mountain Background matching exact image crop */}
-            <div className="absolute right-0 top-0 bottom-0 w-[52%] pointer-events-none select-none overflow-hidden">
+          <div className="relative overflow-hidden bg-white rounded-2xl border border-[#E5E7E0] px-6 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between min-h-[92px]">
+            {/* Right Mountain Background with smooth fade */}
+            <div className="absolute right-0 top-0 bottom-0 w-[55%] pointer-events-none select-none overflow-hidden [mask-image:linear-gradient(to_right,transparent_0%,black_25%)]">
               <img
-                src={heroMountainClean}
+                src={heroMountainsAi}
                 alt="Mountain backdrop"
-                className="w-full h-full object-cover object-right"
+                className="w-full h-full object-cover object-center"
               />
             </div>
 
@@ -279,7 +279,7 @@ export const LearnerOverview: React.FC = () => {
             <div className="relative z-10 mt-3 md:mt-0 shrink-0">
               <Link
                 to="/app/my-demands"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1E5743] hover:bg-[#153F30] text-white text-xs font-semibold transition-all shadow-sm"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0E6636] hover:bg-[#153F30] text-white text-xs font-semibold transition-all shadow-sm"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Request Workshop</span>
@@ -292,18 +292,18 @@ export const LearnerOverview: React.FC = () => {
             {/* Card 1: Active Demands */}
             <Link
               to="/app/my-demands"
-              className="bg-white px-4 py-3 rounded-2xl border border-[#E5E7E0] hover:border-[#1E5743]/40 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)] group flex flex-col justify-between h-[82px]"
+              className="bg-white px-4 py-3 rounded-2xl border border-[#E5E7E0] hover:border-[#0E6636]/40 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)] group flex flex-col justify-between h-[82px]"
             >
               <div className="flex items-center gap-1.5 text-gray-500">
-                <MessageSquare className="w-4 h-4 text-[#1E5743]" />
+                <MessageSquare className="w-4 h-4 text-[#0E6636]" />
                 <span className="text-xs font-medium text-gray-600">Active Demands</span>
               </div>
               <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold font-sans text-[#1E5743]">
+                <span className="text-2xl font-bold font-sans text-[#0E6636]">
                   {activeDemandsCount}
                 </span>
                 <div className="flex items-center gap-1">
-                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-[#EAF5EE] text-[#1E5743] text-[10px] font-bold">
+                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-[#EBF9EA] text-[#0E6636] text-[10px] font-bold">
                     ↑ +{activeDemandsCount}
                   </span>
                   <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
@@ -314,18 +314,18 @@ export const LearnerOverview: React.FC = () => {
             {/* Card 2: Confirmed Bookings */}
             <Link
               to="/app/reservations"
-              className="bg-white px-4 py-3 rounded-2xl border border-[#E5E7E0] hover:border-[#1E5743]/40 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)] group flex flex-col justify-between h-[82px]"
+              className="bg-white px-4 py-3 rounded-2xl border border-[#E5E7E0] hover:border-[#0E6636]/40 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)] group flex flex-col justify-between h-[82px]"
             >
               <div className="flex items-center gap-1.5 text-gray-500">
-                <Ticket className="w-4 h-4 text-[#1E5743]" />
+                <Ticket className="w-4 h-4 text-[#0E6636]" />
                 <span className="text-xs font-medium text-gray-600">Confirmed Bookings</span>
               </div>
               <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold font-sans text-[#1E5743]">
+                <span className="text-2xl font-bold font-sans text-[#0E6636]">
                   {confirmedBookingsCount}
                 </span>
                 <div className="flex items-center gap-1">
-                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-[#EAF5EE] text-[#1E5743] text-[10px] font-bold">
+                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-[#EBF9EA] text-[#0E6636] text-[10px] font-bold">
                     ↑ +{confirmedBookingsCount}
                   </span>
                   <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
@@ -336,14 +336,14 @@ export const LearnerOverview: React.FC = () => {
             {/* Card 3: Store Credit */}
             <Link
               to="/app/rewards"
-              className="bg-white px-4 py-3 rounded-2xl border border-[#E5E7E0] hover:border-[#1E5743]/40 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)] group flex flex-col justify-between h-[82px]"
+              className="bg-white px-4 py-3 rounded-2xl border border-[#E5E7E0] hover:border-[#0E6636]/40 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)] group flex flex-col justify-between h-[82px]"
             >
               <div className="flex items-center gap-1.5 text-gray-500">
-                <Coins className="w-4 h-4 text-[#1E5743]" />
+                <Coins className="w-4 h-4 text-[#0E6636]" />
                 <span className="text-xs font-medium text-gray-600">Store Credit</span>
               </div>
               <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold font-sans text-[#1E5743]">
+                <span className="text-2xl font-bold font-sans text-[#0E6636]">
                   {storeCreditFormatted}
                 </span>
                 <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
@@ -353,14 +353,14 @@ export const LearnerOverview: React.FC = () => {
             {/* Card 4: Badges Earned */}
             <Link
               to="/app/rewards"
-              className="bg-white px-4 py-3 rounded-2xl border border-[#E5E7E0] hover:border-[#1E5743]/40 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)] group flex flex-col justify-between h-[82px]"
+              className="bg-white px-4 py-3 rounded-2xl border border-[#E5E7E0] hover:border-[#0E6636]/40 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)] group flex flex-col justify-between h-[82px]"
             >
               <div className="flex items-center gap-1.5 text-gray-500">
-                <Award className="w-4 h-4 text-[#1E5743]" />
+                <Award className="w-4 h-4 text-[#0E6636]" />
                 <span className="text-xs font-medium text-gray-600">Badges Earned</span>
               </div>
               <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold font-sans text-[#1E5743]">
+                <span className="text-2xl font-bold font-sans text-[#0E6636]">
                   {badgesCount}
                 </span>
                 <div className="flex items-center gap-1">
@@ -377,19 +377,14 @@ export const LearnerOverview: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Card 1: Your Learning Progress */}
             <div className="bg-white rounded-2xl border border-[#E5E7E0] p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between h-[155px]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <BarChart2 className="w-4 h-4 text-[#1E5743]" />
-                  <h3 className="font-bold text-xs text-[#1A2621]">Your Learning Progress</h3>
-                </div>
-                <span className="text-[10px] text-gray-400 font-medium">
-                  {confirmedBookingsCount} of 3 workshops completed
-                </span>
+              <div className="flex items-center gap-1.5">
+                <BarChart2 className="w-4 h-4 text-[#0E6636] shrink-0" />
+                <h3 className="font-bold text-xs text-[#1A2621] whitespace-nowrap">Your Learning Progress</h3>
               </div>
 
               <div className="flex items-center justify-between gap-3 pt-1">
                 {/* Donut Chart Gauge */}
-                <div className="relative w-18 h-18 sm:w-20 sm:h-20 flex items-center justify-center shrink-0">
+                <div className="relative w-[72px] h-[72px] sm:w-20 sm:h-20 flex items-center justify-center shrink-0">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                     <circle
                       cx="50"
@@ -403,7 +398,7 @@ export const LearnerOverview: React.FC = () => {
                       cx="50"
                       cy="50"
                       r="38"
-                      className="stroke-[#1E5743]"
+                      className="stroke-[#0E6636]"
                       strokeWidth="8"
                       strokeDasharray={2 * Math.PI * 38}
                       strokeDashoffset={2 * Math.PI * 38 * (1 - 0.62)}
@@ -418,8 +413,11 @@ export const LearnerOverview: React.FC = () => {
 
                 {/* Breakdown Legend List */}
                 <div className="space-y-1 text-left flex-1 pl-2">
+                  <div className="text-[9.5px] text-gray-400 font-medium whitespace-nowrap pb-0.5">
+                    {confirmedBookingsCount} of 3 workshops completed
+                  </div>
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-[#1A2621]">
-                    <div className="w-3.5 h-3.5 rounded-full bg-[#1E5743] text-white flex items-center justify-center text-[9px]">
+                    <div className="w-3.5 h-3.5 rounded-full bg-[#0E6636] text-white flex items-center justify-center text-[9px]">
                       ✓
                     </div>
                     <span>{confirmedBookingsCount} Completed</span>
@@ -440,12 +438,12 @@ export const LearnerOverview: React.FC = () => {
             <div className="bg-white rounded-2xl border border-[#E5E7E0] p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between h-[155px]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-[#1E5743]" />
+                  <Layers className="w-4 h-4 text-[#0E6636]" />
                   <h3 className="font-bold text-xs text-[#1A2621]">Active Learning Path</h3>
                 </div>
                 <Link
                   to="/app/reservations"
-                  className="text-[11px] text-[#1E5743] font-semibold hover:underline flex items-center gap-0.5"
+                  className="text-[11px] text-[#0E6636] font-semibold hover:underline flex items-center gap-0.5"
                 >
                   <span>View path</span>
                   <span>→</span>
@@ -456,10 +454,10 @@ export const LearnerOverview: React.FC = () => {
                 <img
                   src={workshopMlops}
                   alt="MLOps Workshop"
-                  className="w-18 h-14 rounded-lg object-cover shrink-0"
+                  className="w-[72px] h-14 rounded-lg object-cover shrink-0"
                 />
                 <div className="flex-1 min-w-0 space-y-1">
-                  <span className="inline-block px-1.5 py-0.2 rounded-full bg-[#EAF5EE] text-[#1E5743] text-[9px] font-bold tracking-wide">
+                  <span className="inline-block px-1.5 py-px rounded-full bg-[#EBF9EA] text-[#0E6636] text-[9px] font-bold tracking-wide">
                     MLOps
                   </span>
                   <h4 className="font-bold text-xs text-[#1A2621] leading-snug line-clamp-2">
@@ -467,7 +465,7 @@ export const LearnerOverview: React.FC = () => {
                   </h4>
                   <div className="flex items-center gap-2 pt-0.5">
                     <div className="flex-1 h-1.5 bg-[#E8ECE9] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#1E5743] rounded-full w-[65%]" />
+                      <div className="h-full bg-[#0E6636] rounded-full w-[65%]" />
                     </div>
                     <span className="text-[10px] font-mono text-gray-400">65%</span>
                   </div>
@@ -495,12 +493,12 @@ export const LearnerOverview: React.FC = () => {
             <div className="bg-white rounded-2xl border border-[#E5E7E0] p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between h-[155px]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <Trophy className="w-4 h-4 text-[#1E5743]" />
+                  <Trophy className="w-4 h-4 text-[#0E6636]" />
                   <h3 className="font-bold text-xs text-[#1A2621]">Achievements</h3>
                 </div>
                 <Link
                   to="/app/rewards"
-                  className="text-[11px] text-[#1E5743] font-semibold hover:underline flex items-center gap-0.5"
+                  className="text-[11px] text-[#0E6636] font-semibold hover:underline flex items-center gap-0.5"
                 >
                   <span>View all</span>
                   <span>→</span>
@@ -511,7 +509,7 @@ export const LearnerOverview: React.FC = () => {
               <div className="grid grid-cols-4 gap-1.5 text-center pt-1 items-start">
                 {/* First Workshop */}
                 <div className="flex flex-col items-center">
-                  <img src={badgeFirstWorkshop} alt="First Workshop" className="w-8.5 h-9 object-contain" />
+                  <img src={badgeFirstWorkshop} alt="First Workshop" className="w-[34px] h-9 object-contain" />
                   <span className="text-[9px] font-medium text-[#1A2621] mt-1 leading-tight">
                     First<br />Workshop
                   </span>
@@ -519,7 +517,7 @@ export const LearnerOverview: React.FC = () => {
 
                 {/* Active Learner */}
                 <div className="flex flex-col items-center">
-                  <img src={badgeActiveLearner} alt="Active Learner" className="w-8.5 h-9 object-contain" />
+                  <img src={badgeActiveLearner} alt="Active Learner" className="w-[34px] h-9 object-contain" />
                   <span className="text-[9px] font-medium text-[#1A2621] mt-1 leading-tight">
                     Active<br />Learner
                   </span>
@@ -527,7 +525,7 @@ export const LearnerOverview: React.FC = () => {
 
                 {/* MLOps Explorer */}
                 <div className="flex flex-col items-center">
-                  <img src={badgeMlopsExplorer} alt="MLOps Explorer" className="w-8.5 h-9 object-contain" />
+                  <img src={badgeMlopsExplorer} alt="MLOps Explorer" className="w-[34px] h-9 object-contain" />
                   <span className="text-[9px] font-medium text-[#1A2621] mt-1 leading-tight">
                     MLOps<br />Explorer
                   </span>
@@ -535,7 +533,7 @@ export const LearnerOverview: React.FC = () => {
 
                 {/* Community Member */}
                 <div className="flex flex-col items-center">
-                  <img src={badgeCommunityMember} alt="Community Member" className="w-8.5 h-9 object-contain" />
+                  <img src={badgeCommunityMember} alt="Community Member" className="w-[34px] h-9 object-contain" />
                   <span className="text-[9px] font-medium text-[#1A2621] mt-1 leading-tight">
                     Community<br />Member
                   </span>
@@ -551,12 +549,12 @@ export const LearnerOverview: React.FC = () => {
             <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-2xl border border-[#E5E7E0] p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-3 flex flex-col justify-between">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-[#1E5743]" />
+                  <Layers className="w-4 h-4 text-[#0E6636]" />
                   <h3 className="font-bold text-xs text-[#1A2621]">Recommended for You</h3>
                 </div>
                 <Link
                   to="/workshops"
-                  className="text-[11px] text-[#1E5743] font-semibold hover:underline flex items-center gap-0.5"
+                  className="text-[11px] text-[#0E6636] font-semibold hover:underline flex items-center gap-0.5"
                 >
                   <span>View all workshops</span>
                   <span>→</span>
@@ -570,7 +568,7 @@ export const LearnerOverview: React.FC = () => {
                   type="button"
                   onClick={() => setCarouselIndex((prev) => (prev > 0 ? prev - 1 : 0))}
                   aria-label="Previous"
-                  className="w-6 h-6 rounded-full bg-white border border-[#E5E7E0] shadow-2xs flex items-center justify-center text-gray-500 hover:bg-[#F4F6F4] transition-colors shrink-0"
+                  className="w-6 h-6 rounded-full bg-white border border-[#E5E7E0] shadow-sm flex items-center justify-center text-gray-500 hover:bg-[#F6F8F7] transition-colors shrink-0"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
@@ -580,29 +578,32 @@ export const LearnerOverview: React.FC = () => {
                   {recommendedWorkshops.map((ws) => (
                     <div
                       key={ws.id}
-                      className="bg-white border border-[#E5E7E0] rounded-xl p-2 flex flex-col justify-between hover:border-[#1E5743]/40 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                      className="bg-white border border-[#E5E7E0] rounded-xl p-2 flex flex-col justify-between hover:border-[#0E6636]/40 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
                     >
                       <div className="space-y-1.5">
-                        <img
-                          src={ws.image}
-                          alt={ws.title}
-                          className="w-full h-18 object-cover rounded-lg"
-                        />
-                        <div>
-                          <div className="flex items-center justify-between text-[9px] font-bold">
-                            <span className="px-1.5 py-0.2 rounded bg-[#EAF5EE] text-[#1E5743] tracking-wide">
-                              {ws.tag}
-                            </span>
-                            <span className="text-[#1A2621] font-sans font-bold">
-                              {ws.price}
-                            </span>
+                        {/* Thumbnail left + tag/price/title right (reference layout) */}
+                        <div className="flex items-start gap-2">
+                          <img
+                            src={ws.image}
+                            alt={ws.title}
+                            className="w-[46px] h-[46px] object-cover rounded-lg shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1 text-[8px] font-bold">
+                              <span className="px-1 py-px rounded bg-[#EBF9EA] text-[#0E6636] tracking-wide truncate">
+                                {ws.tag}
+                              </span>
+                              <span className="text-[#1A2621] font-sans font-bold text-[9.5px] shrink-0">
+                                {ws.price}
+                              </span>
+                            </div>
+                            <h4 className="font-bold text-[10.5px] text-[#1A2621] leading-tight line-clamp-2 mt-1">
+                              {ws.title}
+                            </h4>
                           </div>
-                          <h4 className="font-bold text-[11px] text-[#1A2621] leading-tight line-clamp-2 mt-1 min-h-[26px]">
-                            {ws.title}
-                          </h4>
                         </div>
 
-                        <div className="flex items-center justify-between text-[9px] text-gray-500 font-medium pt-0.5">
+                        <div className="flex items-center justify-between gap-1 text-[8.5px] text-gray-500 font-medium whitespace-nowrap">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-2.5 h-2.5 text-gray-400" />
                             <span>{ws.date}</span>
@@ -618,10 +619,10 @@ export const LearnerOverview: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1 pt-2 mt-1 border-t border-[#E5E7E0]/60">
+                      <div className="flex items-center gap-1 pt-1.5">
                         <Link
                           to="/workshops"
-                          className="flex-1 py-1.5 px-2.5 rounded-lg bg-[#1E5743] hover:bg-[#143B2E] text-white text-[10.5px] font-semibold text-center transition-colors flex items-center justify-center gap-1 shadow-2xs"
+                          className="flex-1 py-1.5 px-2.5 rounded-lg bg-[#0E6636] hover:bg-[#143B2E] text-white text-[10.5px] font-semibold text-center transition-colors flex items-center justify-center gap-1 shadow-sm"
                         >
                           <span>Reserve</span>
                           <span>→</span>
@@ -631,12 +632,12 @@ export const LearnerOverview: React.FC = () => {
                           onClick={() => toggleBookmark(ws.id)}
                           className={`p-1.5 rounded-lg border transition-colors ${
                             bookmarked[ws.id]
-                              ? 'border-[#1E5743] text-[#1E5743] bg-[#EAF5EE]'
-                              : 'border-[#E2E4DE] text-gray-400 hover:text-[#1E5743] hover:border-[#1E5743]/60'
+                              ? 'border-[#0E6636] text-[#0E6636] bg-[#EBF9EA]'
+                              : 'border-[#E2E4DE] text-gray-400 hover:text-[#0E6636] hover:border-[#0E6636]/60'
                           }`}
                           aria-label="Bookmark"
                         >
-                          <Bookmark className={`w-3 h-3 ${bookmarked[ws.id] ? 'fill-[#1E5743]' : ''}`} />
+                          <Bookmark className={`w-3 h-3 ${bookmarked[ws.id] ? 'fill-[#0E6636]' : ''}`} />
                         </button>
                       </div>
                     </div>
@@ -648,7 +649,7 @@ export const LearnerOverview: React.FC = () => {
                   type="button"
                   onClick={() => setCarouselIndex((prev) => (prev < 1 ? prev + 1 : 1))}
                   aria-label="Next"
-                  className="w-6 h-6 rounded-full bg-white border border-[#E5E7E0] shadow-2xs flex items-center justify-center text-gray-500 hover:bg-[#F4F6F4] transition-colors shrink-0"
+                  className="w-6 h-6 rounded-full bg-white border border-[#E5E7E0] shadow-sm flex items-center justify-center text-gray-500 hover:bg-[#F6F8F7] transition-colors shrink-0"
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
@@ -656,22 +657,22 @@ export const LearnerOverview: React.FC = () => {
 
               {/* Carousel Pagination Dots */}
               <div className="flex items-center justify-center gap-1.5 pt-0.5">
-                <span className={`w-1.5 h-1.5 rounded-full transition-colors ${carouselIndex === 0 ? 'bg-[#1E5743]' : 'bg-gray-300'}`} />
-                <span className={`w-1.5 h-1.5 rounded-full transition-colors ${carouselIndex === 1 ? 'bg-[#1E5743]' : 'bg-gray-300'}`} />
+                <span className={`w-1.5 h-1.5 rounded-full transition-colors ${carouselIndex === 0 ? 'bg-[#0E6636]' : 'bg-gray-300'}`} />
+                <span className={`w-1.5 h-1.5 rounded-full transition-colors ${carouselIndex === 1 ? 'bg-[#0E6636]' : 'bg-gray-300'}`} />
                 <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />
               </div>
             </div>
 
             {/* Upcoming Events */}
-            <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-2xl border border-[#E5E7E0] p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-2 flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-0.5">
+            <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-2xl border border-[#E5E7E0] p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-start">
+              <div className="flex items-center justify-between mb-2.5">
                 <div className="flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-[#1E5743]" />
+                  <Calendar className="w-4 h-4 text-[#0E6636]" />
                   <h3 className="font-bold text-xs text-[#1A2621]">Upcoming Events</h3>
                 </div>
                 <Link
                   to="/app/reservations"
-                  className="text-[11px] text-[#1E5743] font-semibold hover:underline flex items-center gap-0.5"
+                  className="text-[11px] text-[#0E6636] font-semibold hover:underline flex items-center gap-0.5"
                 >
                   <span>View all</span>
                   <span>→</span>
@@ -684,12 +685,12 @@ export const LearnerOverview: React.FC = () => {
                   <Link
                     key={ev.id}
                     to="/app/reservations"
-                    className="group p-2 rounded-xl border border-[#E5E7E0] hover:border-[#1E5743]/40 bg-white flex items-center justify-between gap-2.5 transition-all"
+                    className="group p-2 rounded-xl border border-[#E5E7E0] hover:border-[#0E6636]/40 bg-white flex items-center justify-between gap-2.5 transition-all"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       {/* Date Badge */}
                       <div className="w-7 text-center shrink-0">
-                        <div className="text-[9px] font-bold text-[#1E5743] uppercase tracking-wider leading-none">
+                        <div className="text-[9px] font-bold text-[#0E6636] uppercase tracking-wider leading-none">
                           {ev.month}
                         </div>
                         <div className="text-base font-bold font-sans text-[#1A2621] leading-tight mt-0.5">
@@ -699,7 +700,7 @@ export const LearnerOverview: React.FC = () => {
 
                       {/* Details */}
                       <div className="min-w-0 space-y-0.5">
-                        <h4 className="font-bold text-xs text-[#1A2621] leading-snug line-clamp-1 group-hover:text-[#1E5743] transition-colors">
+                        <h4 className="font-bold text-xs text-[#1A2621] leading-snug line-clamp-1 group-hover:text-[#0E6636] transition-colors">
                           {ev.title}
                         </h4>
                         <div className="flex items-center gap-2 text-[9.5px] text-gray-500">
@@ -707,14 +708,14 @@ export const LearnerOverview: React.FC = () => {
                             <Clock className="w-2.5 h-2.5 text-gray-400" />
                             <span>{ev.duration}</span>
                           </div>
-                          <span className="px-1.5 py-0.2 rounded-full text-[8.5px] font-bold bg-[#EAF5EE] text-[#1E5743]">
+                          <span className="px-1.5 py-px rounded-full text-[8.5px] font-bold bg-[#EBF9EA] text-[#0E6636]">
                             {ev.status}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:translate-x-0.5 group-hover:text-[#1E5743] transition-all shrink-0" />
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:translate-x-0.5 group-hover:text-[#0E6636] transition-all shrink-0" />
                   </Link>
                 ))}
               </div>
@@ -731,7 +732,7 @@ export const LearnerOverview: React.FC = () => {
           <div className="bg-white rounded-2xl border border-[#E5E7E0] p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-[#1E5743]" />
+                <Calendar className="w-4 h-4 text-[#0E6636]" />
                 <h3 className="font-bold text-xs text-[#1A2621]">My Schedule</h3>
               </div>
             </div>
@@ -781,12 +782,12 @@ export const LearnerOverview: React.FC = () => {
                     onClick={() => {
                       if (item.isCurrentMonth) setSelectedCalendarDay(item.day);
                     }}
-                    className={`h-6.5 flex flex-col items-center justify-center rounded-full transition-colors relative ${
-                      !item.isCurrentMonth ? 'text-gray-300 cursor-default' : 'hover:bg-[#F4F6F4]'
+                    className={`h-[26px] flex flex-col items-center justify-center rounded-full transition-colors relative ${
+                      !item.isCurrentMonth ? 'text-gray-300 cursor-default' : 'hover:bg-[#F6F8F7]'
                     }`}
                   >
                     {item.isHighlight || isSelected ? (
-                      <span className="w-5.5 h-5.5 rounded-full bg-[#1E5743] text-white flex items-center justify-center font-bold text-[10.5px]">
+                      <span className="w-[22px] h-[22px] rounded-full bg-[#0E6636] text-white flex items-center justify-center font-bold text-[10.5px]">
                         {item.day}
                       </span>
                     ) : (
@@ -807,7 +808,7 @@ export const LearnerOverview: React.FC = () => {
             {/* Legend row */}
             <div className="flex items-center justify-between text-[9.5px] text-gray-500 pt-1.5 border-t border-[#E5E7E0]/60 px-0.5">
               <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#1E5743]" />
+                <span className="w-2 h-2 rounded-full bg-[#0E6636]" />
                 <span>Workshop</span>
               </div>
               <div className="flex items-center gap-1">
@@ -824,7 +825,7 @@ export const LearnerOverview: React.FC = () => {
           {/* Card 2: Quick Actions */}
           <div className="bg-white rounded-2xl border border-[#E5E7E0] p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-2.5">
             <div className="flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-[#1E5743]" />
+              <Zap className="w-4 h-4 text-[#0E6636]" />
               <h3 className="font-bold text-xs text-[#1A2621]">Quick Actions</h3>
             </div>
 
@@ -832,36 +833,36 @@ export const LearnerOverview: React.FC = () => {
               {/* New Demand */}
               <Link
                 to="/app/my-demands"
-                className="flex items-center gap-1.5 p-2 rounded-xl border border-[#E5E7E0] hover:border-[#1E5743]/50 hover:bg-[#F4F6F4] transition-all text-xs font-semibold text-[#1A2621] group"
+                className="flex items-center gap-1.5 p-2 rounded-xl border border-[#E5E7E0] hover:border-[#0E6636]/50 hover:bg-[#F6F8F7] transition-all text-xs font-semibold text-[#1A2621] group"
               >
-                <PlusCircle className="w-3.5 h-3.5 text-[#1E5743] shrink-0" />
+                <PlusCircle className="w-3.5 h-3.5 text-[#0E6636] shrink-0" />
                 <span className="truncate">New Demand</span>
               </Link>
 
               {/* Book Workshop */}
               <Link
                 to="/workshops"
-                className="flex items-center gap-1.5 p-2 rounded-xl border border-[#E5E7E0] hover:border-[#1E5743]/50 hover:bg-[#F4F6F4] transition-all text-xs font-semibold text-[#1A2621] group"
+                className="flex items-center gap-1.5 p-2 rounded-xl border border-[#E5E7E0] hover:border-[#0E6636]/50 hover:bg-[#F6F8F7] transition-all text-xs font-semibold text-[#1A2621] group"
               >
-                <Calendar className="w-3.5 h-3.5 text-[#1E5743] shrink-0" />
+                <Calendar className="w-3.5 h-3.5 text-[#0E6636] shrink-0" />
                 <span className="truncate">Book Workshop</span>
               </Link>
 
               {/* Save Resource */}
               <Link
                 to="/app/reservations"
-                className="flex items-center gap-1.5 p-2 rounded-xl border border-[#E5E7E0] hover:border-[#1E5743]/50 hover:bg-[#F4F6F4] transition-all text-xs font-semibold text-[#1A2621] group"
+                className="flex items-center gap-1.5 p-2 rounded-xl border border-[#E5E7E0] hover:border-[#0E6636]/50 hover:bg-[#F6F8F7] transition-all text-xs font-semibold text-[#1A2621] group"
               >
-                <Bookmark className="w-3.5 h-3.5 text-[#1E5743] shrink-0" />
+                <Bookmark className="w-3.5 h-3.5 text-[#0E6636] shrink-0" />
                 <span className="truncate">Save Resource</span>
               </Link>
 
               {/* Get Support */}
               <Link
                 to="/app/settings"
-                className="flex items-center gap-1.5 p-2 rounded-xl border border-[#E5E7E0] hover:border-[#1E5743]/50 hover:bg-[#F4F6F4] transition-all text-xs font-semibold text-[#1A2621] group"
+                className="flex items-center gap-1.5 p-2 rounded-xl border border-[#E5E7E0] hover:border-[#0E6636]/50 hover:bg-[#F6F8F7] transition-all text-xs font-semibold text-[#1A2621] group"
               >
-                <MessageSquare className="w-3.5 h-3.5 text-[#1E5743] shrink-0" />
+                <MessageSquare className="w-3.5 h-3.5 text-[#0E6636] shrink-0" />
                 <span className="truncate">Get Support</span>
               </Link>
             </div>
@@ -872,10 +873,10 @@ export const LearnerOverview: React.FC = () => {
             <div className="relative z-10 space-y-1.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-[#1E5743]" />
+                  <Sparkles className="w-4 h-4 text-[#0E6636]" />
                   <h3 className="font-bold text-xs text-[#1A2621]">AI Learning Advisor</h3>
                 </div>
-                <span className="px-1.5 py-0.2 rounded-full bg-[#EAF5EE] text-[#1E5743] text-[9px] font-bold">
+                <span className="px-1.5 py-px rounded-full bg-[#EBF9EA] text-[#0E6636] text-[9px] font-bold">
                   AI
                 </span>
               </div>
@@ -887,7 +888,7 @@ export const LearnerOverview: React.FC = () => {
               <div className="pt-1.5">
                 <Link
                   to="/app/recommendations"
-                  className="w-full py-2 px-3 rounded-xl bg-white border border-[#C5DFD0] hover:border-[#1E5743] hover:bg-[#EAF5EE]/40 text-[#1E5743] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-2xs"
+                  className="w-full py-2 px-3 rounded-xl bg-white border border-[#C5DFD0] hover:border-[#0E6636] hover:bg-[#EBF9EA]/40 text-[#0E6636] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span>Ask the AI Advisor</span>
@@ -913,8 +914,8 @@ export const LearnerOverview: React.FC = () => {
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0C3827] via-[#1A5038] to-[#123E2C] border border-[#164834] px-5 sm:px-6 py-4 shadow-[0_2px_4px_rgba(0,0,0,0.04)] flex flex-col md:flex-row md:items-center justify-between gap-4 text-white min-h-[58px]">
         {/* Left: Bullseye Icon + Milestone Text */}
         <div className="relative z-10 flex items-center gap-3.5 max-w-xl">
-          <div className="w-8.5 h-8.5 rounded-full border border-white/20 bg-white/10 flex items-center justify-center text-white shrink-0">
-            <Target className="w-4.5 h-4.5" />
+          <div className="w-[34px] h-[34px] rounded-full border border-white/20 bg-white/10 flex items-center justify-center text-white shrink-0">
+            <Target className="w-[18px] h-[18px]" />
           </div>
           <div>
             <h4 className="font-bold text-sm sm:text-base text-white tracking-tight leading-tight">
@@ -927,9 +928,9 @@ export const LearnerOverview: React.FC = () => {
         </div>
 
         {/* Mountain illustration seamlessly embedded into banner */}
-        <div className="hidden md:block absolute right-[180px] top-0 bottom-0 w-[335px] pointer-events-none select-none overflow-hidden">
+        <div className="hidden md:block absolute right-[180px] top-0 bottom-0 w-[380px] pointer-events-none select-none overflow-hidden [mask-image:linear-gradient(to_right,transparent_0%,black_20%,black_80%,transparent_100%)]">
           <img
-            src={milestoneMountainSeamless}
+            src={milestoneMountainsAi}
             alt="Mountains"
             className="w-full h-full object-cover object-center opacity-85"
           />
