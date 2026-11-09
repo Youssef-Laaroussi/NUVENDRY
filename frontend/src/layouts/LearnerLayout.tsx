@@ -11,8 +11,7 @@ import sidebarExploreCard from '../assets/sidebar-explore-card.png';
 
 const TOP_NAV_TABS = [
   { name: 'Overview', path: '/app/overview' },
-  { name: 'My Learning', path: '/app/reservations' },
-  { name: 'Discover', path: '/app/discover' },
+  { name: 'Workshops', path: '/workshops' },
   { name: 'AI Matches', path: '/app/recommendations' },
   { name: 'Rewards', path: '/app/rewards' },
   { name: 'Referrals', path: '/app/referrals' },
@@ -87,7 +86,7 @@ export const LearnerLayout: React.FC = () => {
           </div>
 
           {/* Top Horizontal Navigation Links */}
-          <nav className="hidden xl:flex items-center gap-5">
+          <nav className="hidden lg:flex items-center gap-5">
             {TOP_NAV_TABS.map((tab) => {
               const isActive = location.pathname === tab.path;
               return (
@@ -202,9 +201,9 @@ export const LearnerLayout: React.FC = () => {
       </header>
 
       {/* Main Workspace Frame */}
-      <div className="flex-1 max-w-[1240px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col md:flex-row gap-4 items-start">
+      <div className="flex-1 max-w-[1380px] w-full mx-auto px-4 sm:px-6 py-4 flex flex-col md:flex-row gap-4 items-start">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:flex flex-col w-[172px] shrink-0 space-y-3.5 sticky top-18">
+        <aside className="hidden md:flex flex-col w-[176px] shrink-0 space-y-3.5 sticky top-18">
           {/* Menu Card */}
           <div className="bg-white rounded-2xl border border-[#E5E7E0] p-2 space-y-0.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
             <div className="px-2.5 py-1.5 text-[9.5px] font-mono font-semibold text-gray-400 uppercase tracking-wider">
@@ -243,21 +242,21 @@ export const LearnerLayout: React.FC = () => {
             </div>
           </div>
 
-          {/* Explore More Workshops Promo Card with Exact Illustration from Mockup */}
-          <div className="relative overflow-hidden bg-[#F0F7F2] rounded-2xl border border-[#D0E5D7] p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between min-h-[160px]">
+          {/* Learn. Book. Earn Rewards Promo Card */}
+          <div className="relative overflow-hidden bg-white rounded-2xl border border-[#E5E7E0] p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between min-h-[175px]">
             <div className="relative z-10 space-y-1">
-              <h4 className="font-serif font-bold text-[#1A2621] text-sm leading-tight">
-                Explore <br />More Workshops
+              <h4 className="font-serif font-bold text-[#1E5743] text-sm sm:text-base leading-tight">
+                Learn. Book.<br />Earn Rewards.
               </h4>
               <p className="text-[10px] text-gray-500 leading-snug">
-                Find new skills, join sessions, and earn rewards.
+                Complete workshops, earn credits & gifts, and grow your skills.
               </p>
               <div className="pt-2">
                 <Link
                   to="/workshops"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#1E5743] text-white text-[11px] font-semibold hover:bg-[#153F30] transition-colors shadow-2xs"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#1E5743] text-white text-[11px] font-semibold hover:bg-[#153F30] transition-colors shadow-2xs"
                 >
-                  <span>Browse Catalog</span>
+                  <span>Explore Catalog</span>
                   <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
