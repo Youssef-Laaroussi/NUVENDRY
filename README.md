@@ -4,6 +4,8 @@
 
 NUVENDRY gives learners a way to describe what they want to learn, helps instructors find compatible demand and draft an offer, and lets learners reserve a seat through a verified PayPal Sandbox checkout.
 
+**Hosted demo:** [nuvendry.vercel.app](https://nuvendry.vercel.app)
+
 > Payments use PayPal Sandbox and do not move real money.
 
 ## The problem
@@ -18,6 +20,10 @@ Instructors often have to guess which workshops learners want. NUVENDRY collects
 - **Book and pay:** learners reserve an available seat and complete checkout with PayPal Orders v2 in Sandbox. The server verifies the captured amount and currency before confirming the reservation.
 - **Manage rewards:** eligible welcome and early-bird discounts can be applied at checkout. Digital workshop materials become available after a confirmed reservation.
 
+## PayPal Sandbox integration
+
+The PayPal JavaScript SDK displays the checkout button and lets learners approve a payment with a Sandbox buyer account. The FastAPI backend uses the PayPal Orders v2 REST API to create and capture the order. It checks the captured amount and currency against the reservation total before confirming the booking.
+
 ## How AI is used
 
 NUVENDRY combines language processing with explicit marketplace rules:
@@ -25,7 +31,7 @@ NUVENDRY combines language processing with explicit marketplace rules:
 - Learner requests are parsed into structured fields such as topic, budget, level, duration, language, and schedule. The current extraction path uses deterministic text patterns and keyword matching.
 - Demand opportunities are grouped using TF-IDF similarity, with compatibility checks for constraints such as budget, language, and difficulty.
 - The offer planner uses request evidence, common skills, and budget and duration constraints to create a draft. An optional Ollama model can improve the draft’s title, skills, outcomes, and outline while the server keeps price, evidence, and constraints authoritative.
-- The learning advisor can use DeepSeek or Ollama when configured. Without a model provider, it uses catalog matching and a rule-based response.
+- The deployed Learning Advisor uses the DeepSeek API to answer learning questions.
 
 The application does not automatically publish instructor offers or make purchases. Instructors review offers, and learners approve checkout.
 
@@ -36,6 +42,12 @@ The application does not automatically publish instructor offers or make purchas
 - PayPal JavaScript SDK and PayPal Orders v2 Sandbox API
 - scikit-learn TF-IDF; optional Ollama and DeepSeek model providers
 - Docker Compose for local development
+
+## Sponsor tools and deployment
+
+- **AG Grid** powers the instructor's Demand Intelligence table. Instructors can sort, filter, and page through demand groups and select an opportunity to draft a workshop offer.
+- **Render** hosts the [FastAPI backend](https://nuvendry.onrender.com/health), which serves the marketplace API and handles PayPal Sandbox order creation and capture.
+- **Vercel** hosts the [React frontend](https://nuvendry.vercel.app) and forwards requests under `/api/` to Render.
 
 ## Run locally
 
