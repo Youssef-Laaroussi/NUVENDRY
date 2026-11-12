@@ -234,6 +234,17 @@ class Reservation(Base):
     reward_redemptions = relationship("RewardRedemption", back_populates="reservation")
     attendance = relationship("AttendanceRecord", back_populates="reservation", uselist=False)
 
+
+class WorkshopReview(Base):
+    __tablename__ = "workshop_reviews"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    reservation_id = Column(String, ForeignKey("reservations.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    workshop_id = Column(String, ForeignKey("workshops.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    rating = Column(Integer, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
 class PaymentOrder(Base):
     __tablename__ = "payment_orders"
     

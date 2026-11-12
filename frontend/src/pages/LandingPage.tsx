@@ -59,13 +59,18 @@ export const LandingPage: React.FC = () => {
         <img
           src={collaborativeWorkspace}
           alt="Learners and an instructor using NUVENDRY to connect learning requests with workshops and PayPal Sandbox checkout"
-          className="absolute inset-0 -z-10 h-full w-full object-cover object-center"
+          className="absolute inset-0 -z-10 h-full w-full object-cover object-[center_8%]"
         />
         <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/80 via-black/25 to-black/5" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/35 via-transparent to-transparent" />
 
         <div className="mx-auto flex min-h-[620px] max-w-7xl items-end px-4 pb-12 pt-32 sm:px-6 md:min-h-[700px] md:px-8 md:pb-16 lg:px-8">
-          <div className="max-w-3xl space-y-5">
+          <motion.div
+            className="max-w-3xl space-y-5"
+            initial={reduceMotion ? false : { opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.65, ease: 'easeOut' }}
+          >
             <div className="space-y-1">
               <h1 className="text-4xl font-serif font-bold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[64px]">
                 Build skills.
@@ -100,7 +105,7 @@ export const LandingPage: React.FC = () => {
               <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-[#b9efc9]" />PayPal Sandbox Verified</span>
               <span className="inline-flex items-center gap-1.5"><Tag className="h-4 w-4 text-[#b9efc9]" />Merchant-Funded Rewards</span>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 

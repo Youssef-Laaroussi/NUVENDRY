@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot } from 'recharts';
-import { Activity, ArrowRight, BarChart3, Calendar, Check, ChevronRight, CreditCard, Gift, Layers, Target, TrendingUp, Users } from 'lucide-react';
+import { Activity, ArrowRight, BarChart3, Calendar, Check, ChevronRight, CreditCard, Gift, Layers, Target, TrendingUp, Users, X } from 'lucide-react';
 import { api, useSyncRefresh } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { AnalyticsOverview, LearningDemand, NotificationItem } from '../../types';
@@ -24,8 +24,14 @@ export function MerchantOverview(){
   const generation = useRef(0);
   const [period,setPeriod] = useState<typeof periods[number]>('30D');
   const [expanded,setExpanded] = useState(false);
+  const [activityOpen,setActivityOpen] = useState(true);
   const {hash} = useLocation();
-  useEffect(()=>{if(hash==='#activity') document.getElementById('activity')?.scrollIntoView();},[hash]);
+  useEffect(()=>{if(hash==='#activity') window.setTimeout(()=>document.getElementById('activity')?.scrollIntoView(),0);},[hash]);
+  useEffect(()=>{
+    const reopen = () => setActivityOpen(true);
+    window.addEventListener('open-instructor-activity', reopen);
+    return () => window.removeEventListener('open-instructor-activity', reopen);
+  },[]);
   const load = useCallback(async()=>{
     const request = ++generation.current;
     if(!user) return;
@@ -106,8 +112,8 @@ export function MerchantOverview(){
       <section><header><Layers/><div><h2>Demands by Topic</h2><p>Request volume by learning topic (last 30 days).</p></div></header><div className="studio-topics"><div className="studio-ring" style={{background:total?'conic-gradient('+gradient+')':'#e8ece9'}}><div><strong>{total}</strong>Total<br/>Demands</div></div><ul>{topics.map((t,i)=><li key={i}><i style={{background:colors[i]}}/>{t.name}<b>{Math.round(100*t.count/total)}%</b> ({t.count})</li>)}{!total&&<li>No requests this month.</li>}</ul></div></section>
       <section className="studio-orders"><header><CreditCard/><div><h2>Recent Verified Sandbox Transactions</h2><p>Recent workshop payments confirmed via PayPal Sandbox.</p></div><Link className="studio-action" to="/merchant/payments">View All Transactions <ArrowRight/></Link></header>
         <div className="studio-table"><table><thead><tr>{['Order ID','Workshop','Buyer (Sandbox)','Amount','Status','Date & Time'].map(t=><th key={t}>{t}</th>)}</tr></thead><tbody>{orders.slice(0,5).map(o=><tr key={o.id}><td>{o.paypal_order_id||o.id}</td><td>{o.workshop_title}</td><td>{o.buyer_name}</td><td>{(o.amount_cents/100).toLocaleString('en-US',{style:'currency',currency:o.currency})}</td><td><em>{o.status==='confirmed'?'✓ Verified':o.status}</em></td><td>{o.created_at ? new Date(o.created_at).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'}) : '—'}</td></tr>)}</tbody></table>{!orders.length&&<p>No confirmed transactions to display.</p>}</div></section>
-      <section id="activity"><header><Activity/><div><h2>Recent Activity</h2><p>Key updates from your instructor workspace.</p></div>{activities.length>4&&<button className="studio-action" onClick={()=>setExpanded(!expanded)}>{expanded?'Show Less':'View All Activity'} <ArrowRight/></button>}</header>
-      {activities.slice(0,expanded?undefined:4).map(([title,message,time],i)=>{const Icon=[Calendar,Layers,Target,Gift][i%4];return <div className="studio-event" key={i}><i><Icon/></i><div><b>{title}</b><p>{message}</p></div><small>{time}</small></div>})}{!activities.length&&<p>No recent activity.</p>}</section>
+      {activityOpen&&<section id="activity"><header><Activity/><div><h2>Recent Activity</h2><p>Key updates from your instructor workspace.</p></div><div className="flex items-center gap-2">{activities.length>4&&<button className="studio-action" onClick={()=>setExpanded(!expanded)}>{expanded?'Show Less':'View All Activity'} <ArrowRight/></button>}<button type="button" className="studio-action" aria-label="Close recent activity" title="Close notifications" onClick={()=>setActivityOpen(false)}><X/></button></div></header>
+      {activities.slice(0,expanded?undefined:4).map(([title,message,time],i)=>{const Icon=[Calendar,Layers,Target,Gift][i%4];return <div className="studio-event" key={i}><i><Icon/></i><div><b>{title}</b><p>{message}</p></div><small>{time}</small></div>})}{!activities.length&&<p>No recent activity.</p>}</section>}
     </div>
   </div>;
 }

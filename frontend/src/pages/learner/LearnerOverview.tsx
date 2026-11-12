@@ -5,12 +5,12 @@ import { useLearnerCalendar } from './useLearnerCalendar';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api, useSyncRefresh } from '../../api/client';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   MessageSquare, Ticket, Coins, Award, BarChart2,
   Layers, Trophy, Calendar, Clock, ChevronRight, ChevronLeft,
   Bookmark, Plus, Bell, Loader2, Users, Zap,
-  PlusCircle, Sparkles, Target, ArrowRight
+  PlusCircle, Sparkles, Target, ArrowRight, X
 } from 'lucide-react';
 import { LearningDemand, Reservation, NotificationItem, Workshop } from '../../types';
 
@@ -31,6 +31,7 @@ import milestoneMountainsAi from '../../assets/milestone-mountains-ai.jpg';
 export const LearnerOverview: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [demands, setDemands] = useState<LearningDemand[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [rewards, setRewards] = useState<any | null>(null);
@@ -149,9 +150,15 @@ export const LearnerOverview: React.FC = () => {
             <h3 className="font-semibold text-[#1A2621] text-xs flex items-center gap-2">
               <Bell className="w-4 h-4 text-[#0E6636]" /> Notifications Inbox
             </h3>
-            <span className="text-xs font-mono text-gray-400">
-              {notifications.filter((n) => !n.is_read).length} unread
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-mono text-gray-400">
+                {notifications.filter((n) => !n.is_read).length} unread
+              </span>
+              <button type="button" onClick={() => navigate('/app/overview')} aria-label="Close notifications inbox"
+                title="Close notifications" className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E6636]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           {notifications.length > 0 ? (
             <div className="space-y-2">

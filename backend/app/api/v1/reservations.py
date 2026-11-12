@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 from app.core.database import get_db
-from app.models.entities import User, Workshop, Reservation, ReservationHold, AuditLog, WorkshopSession, MerchantProfile, Notification, ReservationReschedule
+from app.models.entities import User, Workshop, Reservation, ReservationHold, AuditLog, WorkshopSession, MerchantProfile, Notification, ReservationReschedule, WorkshopReview
 from app.schemas.reservation import (
     ReservationQuoteRequest, ReservationQuoteResponse,
-    ReservationCreate, ReservationResponse, RescheduleRequest, ReservedWorkshop
+    ReservationCreate, ReservationResponse, RescheduleRequest, ReservedWorkshop, ReservationReviewCreate
 )
 from app.rewards.engine import reward_engine
 from app.api.deps import get_current_user
@@ -196,6 +196,10 @@ async def list_my_reservations(
         )
     } if reservations else {}
     responses = []
+    review_rows = await db.execute(select(WorkshopReview.reservation_id, WorkshopReview.rating).where(
+        WorkshopReview.reservation_id.in_([item.id for item in reservations])
+    )) if reservations else None
+    review_ratings = dict(review_rows.all()) if review_rows else {}
     for r in reservations:
         change, session = schedules.get(r.id, (None, None))
         workshop = ReservedWorkshop.model_validate(r.workshop) if r.workshop else None
@@ -208,6 +212,7 @@ async def list_my_reservations(
             workshop=workshop,
             reschedule_status=change.status if change else None,
             attended=r.attendance.attended if r.attendance else None,
+            review_rating=review_ratings.get(r.id),
             user_id=r.user_id,
             final_amount_cents=r.final_amount_cents,
             currency=r.currency,
@@ -218,6 +223,35 @@ async def list_my_reservations(
             confirmed_at=r.confirmed_at,
         ))
     return responses
+
+
+@router.post("/{reservation_id}/review")
+async def submit_reservation_review(
+    reservation_id: str,
+    payload: ReservationReviewCreate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    reservation = await db.scalar(select(Reservation)
+        .options(selectinload(Reservation.attendance))
+        .where(Reservation.id == reservation_id, Reservation.user_id == user.id))
+    if not reservation or reservation.status != "confirmed":
+        raise HTTPException(404, "Confirmed reservation not found.")
+    if not reservation.attendance or not reservation.attendance.attended:
+        raise HTTPException(409, "You can review a workshop after the instructor marks your attendance.")
+
+    review = await db.scalar(select(WorkshopReview).where(WorkshopReview.reservation_id == reservation.id))
+    if review:
+        review.rating = payload.rating
+    else:
+        db.add(WorkshopReview(
+            reservation_id=reservation.id,
+            workshop_id=reservation.workshop_id,
+            user_id=user.id,
+            rating=payload.rating,
+        ))
+    await db.commit()
+    return {"reservation_id": reservation.id, "rating": payload.rating}
 
 @router.post("/{reservation_id}/cancel", response_model=ReservationResponse)
 async def cancel_pending_reservation(

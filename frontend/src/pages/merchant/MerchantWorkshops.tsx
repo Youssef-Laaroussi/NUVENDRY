@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Calendar, Video, Users, Database, Layers, Zap, Search, LayoutGrid, List, Pencil, Copy, MoreHorizontal, Settings, ChevronDown, Plus, Archive, Trash2, Check, Circle } from 'lucide-react';
-import { api } from '../../api/client';
+import { Calendar, Video, Users, Database, Layers, Zap, Search, LayoutGrid, List, Pencil, Copy, MoreHorizontal, Settings, ChevronDown, Plus, Archive, Trash2, Check, Circle, Tag, Star } from 'lucide-react';
+import { api, useSyncRefresh } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import './Workshops.css';
 
@@ -31,15 +31,26 @@ export function MerchantWorkshops(){
   const { user } = useAuth();
   const [workshops,setWorkshops] = useState<Workshop[]>([]);
   const [payments,setPayments] = useState<{workshop_id:string; amount_cents:number; currency:string; paypal_capture_id:string | null}[] | null>(null);
+  const [ratingSummary, setRatingSummary] = useState<{ average: number | null; count: number }>({ average: null, count: 0 });
   const [message,setMessage] = useState('Loading workshops…');
+  const refreshRatingSummary = useCallback(async () => {
+    try {
+      setRatingSummary(await api.getMerchantRatingSummary());
+    } catch {
+      // Keep the last known summary if a refresh fails.
+    }
+  }, []);
+  useSyncRefresh(['reservations'], refreshRatingSummary);
   useEffect(() => {
     let active = true;
     api.getMerchantWorkshops().then(rows => {
       if (active) { setWorkshops(rows); setMessage(''); }
     }).catch(() => { if (active) setMessage('Could not load workshops.'); });
     api.getPaymentTransactions().then(rows => { if (active) setPayments(rows); }).catch(() => {});
-    return () => { active = false; };
-  }, [user?.id]);
+    api.getMerchantRatingSummary().then(summary => { if (active) setRatingSummary(summary); }).catch(() => {});
+    window.addEventListener('focus', refreshRatingSummary);
+    return () => { active = false; window.removeEventListener('focus', refreshRatingSummary); };
+  }, [user?.id, refreshRatingSummary]);
   const now = new Date();
   const today = dateKey(now);
   const items: Item[] = workshops.map(w => {
@@ -72,6 +83,7 @@ export function MerchantWorkshops(){
   const [edit,setEdit]=useState<Item|null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState('');
+  const [priceInput, setPriceInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const editingId = edit?.id;
@@ -79,6 +91,7 @@ export function MerchantWorkshops(){
 
   useEffect(() => {
     setCoverFile(null);
+    setPriceInput(edit ? (edit.price_cents / 100).toFixed(2) : '');
   }, [editingId]);
 
   useEffect(() => {
@@ -119,6 +132,11 @@ export function MerchantWorkshops(){
   const visible=inventory.slice(page*5,page*5+5);
   const inventoryLink=()=>document.getElementById('workshop-inventory')?.scrollIntoView({behavior:'smooth'});
   async function save(w: Item) {
+    const price = Number(priceInput);
+    if (!Number.isFinite(price) || price <= 0) {
+      setMessage('Enter a price greater than zero.');
+      return;
+    }
     setSaving(true);
     setMessage('');
     try {
@@ -130,6 +148,7 @@ export function MerchantWorkshops(){
       }) : undefined;
       const updated = await api.updateWorkshop(w.id, {
         image_data: imageData, title:w.title, scheduled_at:new Date(w.date+'T'+w.time).toISOString(),
+        price_cents: Math.round(price * 100),
         ...(w.status==='Draft'?{is_published:false}:{}),
       });
       setWorkshops(rows=>rows.map(row=>row.id===w.id?updated:row));
@@ -190,15 +209,15 @@ export function MerchantWorkshops(){
   return <div className="ws-layout"><main className="ws-main"><header className="studio-hero"><h1>Workshops <Calendar/></h1><p>Create, publish, and manage your workshops, live sessions, and schedules, track performance, and grow your learning impact with NUVENDRY.</p></header>
   {message&&<p role="status">{message}</p>}<div className="studio-kpis">{['Published Workshops','Live Sessions','Average Fill Rate','Revenue'].map((label,i)=>{const Icon=[Calendar,Video,Users,Database][i];return <section key={label}><span><Icon/>{label}</span><div><strong>{[items.filter(w=>w.is_published).length,items.filter(w=>w.status==='Live').length,items.length?Math.round(items.reduce((total,w)=>total+fill(w),0)/items.length)+'%':'—',paymentTotal()][i]}</strong></div></section>})}</div>
   <div className="ws-box ws-toolbar"><label><Search/><input aria-label="Search workshops" placeholder="Search workshops, topics, or keywords…" value={query} onChange={e=>setQuery(e.target.value)}/></label>{dropdown('All Statuses',status,['Live','Published','Draft'],setStatus)}{dropdown('All Topics',topic,[...new Set(items.map(w=>w.topic))],setTopic)}<select aria-label="Workshop format"><option>All Formats</option><option>Live Workshop</option></select>{dropdown('All Dates',month,[...new Set(items.map(w=>w.date.slice(0,7)).filter(Boolean))].sort(),setMonth)}<div>{[false,true].map(v=><button key={String(v)} aria-pressed={list===v} onClick={()=>setList(v)}>{v?<List/>:<LayoutGrid/>}{v?'List':'Grid'}</button>)}</div></div>
-  <div className={'ws-cards'+(list?' ws-list':'')}>{(list?matches:matches.slice(0,6)).map(w=><article className="ws-box ws-card" key={w.id}><div className="ws-cover"><img src={w.image} alt="" className={w.is_published && w.image_url ? "ws-uploaded-cover" : undefined}/>{badge(w)}<button aria-label={'Manage '+w.title} onClick={()=>setMore(w)}><MoreHorizontal/></button></div><div className="ws-body"><h3>{w.title}</h3><p>{w.description}</p><div className="ws-person"><div><b>{user?.full_name}</b><small>Instructor</small></div></div><div className="ws-meta"><Calendar/>{dateLabel(w.date)}<span><Users/> {w.booked} / {w.capacity} ({fill(w)}%)</span></div><progress max={100} value={fill(w)}/></div></article>)}</div>{!matches.length&&<p>No workshops match these filters.</p>}
+  <div className={'ws-cards'+(list?' ws-list':'')}>{(list?matches:matches.slice(0,6)).map(w=><article className="ws-box ws-card" key={w.id}><div className="ws-cover"><img src={w.image} alt="" className={w.is_published && w.image_url ? "ws-uploaded-cover" : undefined}/>{badge(w)}<button aria-label={'Manage '+w.title} onClick={()=>setMore(w)}><MoreHorizontal/></button></div><div className="ws-body"><h3>{w.title}</h3><p>{w.description}</p><div className="ws-price"><Tag/><strong>{(w.price_cents/100).toLocaleString('en-US',{style:'currency',currency:w.currency})}</strong></div><div className="ws-person"><div><b>{user?.full_name}</b><small>Instructor</small></div><span className="ws-rating" aria-label={ratingSummary.count ? `Instructor rating ${ratingSummary.average?.toFixed(1)} from ${ratingSummary.count} learner ratings` : 'No learner ratings yet'}><Star/><b>{ratingSummary.count ? ratingSummary.average?.toFixed(1) : 'New'}</b><span>({ratingSummary.count})</span></span></div><div className="ws-meta"><Calendar/>{dateLabel(w.date)}<span><Users/> {w.booked} / {w.capacity} ({fill(w)}%)</span></div><progress max={100} value={fill(w)}/></div></article>)}</div>{!matches.length&&<p>No workshops match these filters.</p>}
 </main>
   <aside className="ws-side"><section className="ws-box"><h2><Calendar/>Upcoming Sessions</h2><header><button aria-label="Previous month" onClick={()=>setCalendar(new Date(calendar.getFullYear(),calendar.getMonth()-1,1))}>‹</button><b>{calendar.toLocaleDateString('en-US',{month:'long',year:'numeric'})}</b><button aria-label="Next month" onClick={()=>setCalendar(new Date(calendar.getFullYear(),calendar.getMonth()+1,1))}>›</button></header><div className="ws-calendar">{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=><b key={d}>{d}</b>)}{Array.from({length:Math.ceil((offset+days)/7)*7},(_,i)=>{const d=new Date(calendar.getFullYear(),calendar.getMonth(),i-offset+1,12);const key=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');return <button key={key} className={d.getMonth()!==calendar.getMonth()?'outside':allSessions.some(s=>s.date===key)?'session':''} aria-current={key===today?'date':undefined} aria-pressed={day===key} onClick={()=>setDay(day===key?'':key)}>{d.getDate()}</button>})}</div><div className="ws-legend"><span>My workshop sessions ({allSessions.filter(s=>s.date.startsWith(period)).length})</span></div></section>
   <section className="ws-box"><h2><Calendar/>{day?dateLabel(day):'Next Sessions'}</h2>{sessions.slice(0,3).map(({workshop:w,date,time,end})=><button className="ws-next" key={w.id+date} onClick={()=>setEdit(w)}><img src={w.image} alt="" className={w.is_published && w.image_url ? "ws-uploaded-cover" : undefined}/><span><b>{w.title}</b><small><Calendar/>{dateLabel(date)} · {clock(time)} – {clock(end)}</small><small><Users/>{w.booked} / {w.capacity} seats {w.status==='Live'?' · Live':''}</small></span>{badge(w)}</button>)}{!sessions.length&&<p>No sessions scheduled.</p>}</section>
 <section className="ws-box ws-quick-actions"><h2><Zap/>Quick Actions</h2><div className="ws-quick"><Link to="/merchant/offer-studio"><Plus/> Create Workshop</Link><button disabled={!items.length} onClick={()=>setEdit(items[0])}><Calendar/> Schedule Session</button><button onClick={inventoryLink}><Layers/> Manage Inventory</button><button aria-expanded={bulk} onClick={()=>setBulk(!bulk)}><Settings/> Bulk Actions <ChevronDown/></button>{bulk&&<div className="ws-bulk"><p>{checked.length?checked.length+' workshops selected':'Select workshops in the inventory.'}</p><button disabled={!checked.length} onClick={()=>unpublish(checked)}><Archive/>Unpublish selected</button></div>}</div></section>
   </aside>
-  <section className="ws-box ws-inventory" id="workshop-inventory"><header><h2><Layers/>Workshop Inventory &amp; Schedule Management</h2><nav>{tabs.map(t=><button key={t} aria-pressed={t===tab} onClick={()=>{setTab(t);setInvPage(0)}}>{t} ({matches.filter(w=>inTab(w,t)).length})</button>)}</nav><Link to="/merchant/offer-studio">+ Create Workshop</Link></header><div className="studio-table"><table><thead><tr><th><input aria-label="Select visible workshops" type="checkbox" checked={!!visible.length&&visible.every(w=>checked.includes(w.id))} onChange={e=>setChecked(e.target.checked?[...new Set([...checked,...visible.map(w=>w.id)])]:checked.filter(id=>!visible.some(w=>w.id===id)))}/></th>{['Workshop Title','Topic','Format','Next Session','Seats','Fill Rate','Revenue','Status','Actions'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{visible.map(w=><tr key={w.id}><td><input type="checkbox" aria-label={'Select '+w.title} checked={checked.includes(w.id)} onChange={()=>setChecked(checked.includes(w.id)?checked.filter(id=>id!==w.id):[...checked,w.id])}/></td><td>{w.title}</td><td><b className="ws-topic">{w.topic}</b></td><td><span className="ws-format"><Video/>Live Workshop</span></td><td>{w.date?shortDate(w.date)+', '+clock(w.time):'—'}</td><td>{w.booked}/{w.capacity}</td><td><span className="ws-fill"><progress max={100} value={fill(w)}/>{fill(w)}%</span></td><td>{paymentTotal(w.id)}</td><td><div className="ws-actions"><button title="Edit workshop" aria-label={'Edit '+w.title} onClick={()=>setEdit(w)}><Pencil/></button><button title="Duplicate workshop" aria-label={'Duplicate '+w.title} onClick={()=>duplicate(w)}><Copy/></button><button title="More actions" aria-label={'More actions for '+w.title} onClick={()=>setMore(w)}><MoreHorizontal/></button></div></td></tr>)}</tbody></table></div>{inventory.length>5&&<div className="ws-pages"><button disabled={!page} onClick={()=>setInvPage(page-1)}>‹</button>{page+1} / {Math.ceil(inventory.length/5)}<button disabled={(page+1)*5>=inventory.length} onClick={()=>setInvPage(page+1)}>›</button></div>}</section>
+  <section className="ws-box ws-inventory" id="workshop-inventory"><header><h2><Layers/>Workshop Inventory &amp; Schedule Management</h2><nav>{tabs.map(t=><button key={t} aria-pressed={t===tab} onClick={()=>{setTab(t);setInvPage(0)}}>{t} ({matches.filter(w=>inTab(w,t)).length})</button>)}</nav><Link to="/merchant/offer-studio">+ Create Workshop</Link></header><div className="studio-table"><table><thead><tr><th><input aria-label="Select visible workshops" type="checkbox" checked={!!visible.length&&visible.every(w=>checked.includes(w.id))} onChange={e=>setChecked(e.target.checked?[...new Set([...checked,...visible.map(w=>w.id)])]:checked.filter(id=>!visible.some(w=>w.id===id)))}/></th>{['Workshop Title','Topic','Format','Next Session','Seats','Price','Fill Rate','Revenue','Status','Actions'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{visible.map(w=><tr key={w.id}><td><input type="checkbox" aria-label={'Select '+w.title} checked={checked.includes(w.id)} onChange={()=>setChecked(checked.includes(w.id)?checked.filter(id=>id!==w.id):[...checked,w.id])}/></td><td>{w.title}</td><td><b className="ws-topic">{w.topic}</b></td><td><span className="ws-format"><Video/>Live Workshop</span></td><td>{w.date?shortDate(w.date)+', '+clock(w.time):'—'}</td><td>{w.booked}/{w.capacity}</td><td>{(w.price_cents/100).toLocaleString('en-US',{style:'currency',currency:w.currency})}</td><td><span className="ws-fill"><progress max={100} value={fill(w)}/>{fill(w)}%</span></td><td>{paymentTotal(w.id)}</td><td>{badge(w)}</td><td><div className="ws-actions"><button title="Edit workshop" aria-label={'Edit '+w.title} onClick={()=>setEdit(w)}><Pencil/></button><button title="Duplicate workshop" aria-label={'Duplicate '+w.title} onClick={()=>duplicate(w)}><Copy/></button><button title="More actions" aria-label={'More actions for '+w.title} onClick={()=>setMore(w)}><MoreHorizontal/></button></div></td></tr>)}</tbody></table></div>{inventory.length>5&&<div className="ws-pages"><button disabled={!page} onClick={()=>setInvPage(page-1)}>‹</button>{page+1} / {Math.ceil(inventory.length/5)}<button disabled={(page+1)*5>=inventory.length} onClick={()=>setInvPage(page+1)}>›</button></div>}</section>
   {more&&<dialog ref={el=>{if(el&&!el.open)el.showModal()}} className="ws-box ws-dialog" onClose={()=>setMore(null)}><h2>{more.title}</h2>{message&&<p role="status">{message}</p>}<div className="ws-options"><button onClick={()=>{setEdit(more);setMore(null)}}><Pencil/>Edit workshop</button><button onClick={()=>duplicate(more)}><Copy/>Duplicate as draft</button><button disabled={!more.is_published} onClick={()=>unpublish([more.id])}><Archive/>Unpublish workshop</button><button disabled={deleting} onClick={()=>void removeWorkshop(more)}><Trash2/>{deleting ? 'Deleting…' : 'Delete workshop'}</button><button disabled={deleting} onClick={()=>setMore(null)}>Close</button></div></dialog>}
-  {edit&&<dialog ref={el=>{if(el&&!el.open)el.showModal()}} className="ws-box ws-dialog" onClose={()=>setEdit(null)}><form onSubmit={e=>{e.preventDefault();void save(edit)}}><h2>Edit workshop</h2>{message&&<p role="status">{message}</p>}<label>Title<input required value={edit.title} onChange={e=>setEdit({...edit,title:e.target.value})}/></label><label>Session date<input type="date" required value={edit.date} onChange={e=>setEdit({...edit,date:e.target.value})}/></label><label>Start time<input type="time" required={!!edit.date} value={edit.time} onChange={e=>setEdit({...edit,time:e.target.value})}/></label><label>Status<select value={edit.status==='Live'?'Published':edit.status} onChange={e=>setEdit({...edit,status:e.target.value})}>{['Published','Draft'].map(s=><option key={s}>{s}</option>)}</select></label><label>
+  {edit&&<dialog ref={el=>{if(el&&!el.open)el.showModal()}} className="ws-box ws-dialog" onClose={()=>setEdit(null)}><form onSubmit={e=>{e.preventDefault();void save(edit)}}><h2>Edit workshop</h2>{message&&<p role="status">{message}</p>}<label>Title<input required value={edit.title} onChange={e=>setEdit({...edit,title:e.target.value})}/></label><label>Price ({edit.currency})<input required type="number" min="0.01" step="0.01" value={priceInput} onChange={e=>setPriceInput(e.target.value)}/></label><label>Session date<input type="date" required value={edit.date} onChange={e=>setEdit({...edit,date:e.target.value})}/></label><label>Start time<input type="time" required={!!edit.date} value={edit.time} onChange={e=>setEdit({...edit,time:e.target.value})}/></label><label>Status<select value={edit.status==='Live'?'Published':edit.status} onChange={e=>setEdit({...edit,status:e.target.value})}>{['Published','Draft'].map(s=><option key={s}>{s}</option>)}</select></label><label>
     Workshop cover <small>Optional · JPG, PNG or WebP · 2 MB max</small>
     {coverPreview && <img src={coverPreview} alt="Workshop cover preview" className="w-full max-h-32 object-contain rounded-lg" />}
     <input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => {

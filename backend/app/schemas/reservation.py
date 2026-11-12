@@ -1,6 +1,6 @@
 from typing import Optional, List, Literal
 from datetime import datetime, timezone
-from pydantic import AwareDatetime, BaseModel, field_validator
+from pydantic import AwareDatetime, BaseModel, Field, field_validator
 
 class ReservationQuoteRequest(BaseModel):
     workshop_id: str
@@ -51,6 +51,7 @@ class ReservationResponse(BaseModel):
     workshop_title: Optional[str] = None
     workshop: Optional[ReservedWorkshop] = None
     attended: Optional[bool] = None
+    review_rating: Optional[int] = None
     reschedule_status: Optional[str] = None
     user_id: str
     final_amount_cents: int
@@ -63,6 +64,10 @@ class ReservationResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ReservationReviewCreate(BaseModel):
+    rating: int = Field(ge=1, le=5)
 
 
 class RescheduleRequest(BaseModel):

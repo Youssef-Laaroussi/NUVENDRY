@@ -283,6 +283,7 @@ export const api = {
     return res;
   },
   getMerchantWorkshops: () => apiRequest<any[]>('/merchant/workshops'),
+  getMerchantRatingSummary: () => apiRequest<{ average: number | null; count: number }>('/merchant/ratings'),
   getMerchantReservations: () => apiRequest<any[]>('/merchant/reservations'),
   markAttendance: async (reservation_id: string, attended: boolean) => {
     const res = await apiRequest<any>(`/merchant/reservations/${reservation_id}/attendance?attended=${attended}`, { method: 'POST' });
@@ -335,6 +336,13 @@ export const api = {
     return response;
   },
   getMyReservations: () => apiRequest<any[]>('/reservations/me'),
+  submitReservationReview: async (reservationId: string, rating: number) => {
+    const result = await apiRequest<{ reservation_id: string; rating: number }>(`/reservations/${reservationId}/review`, {
+      method: 'POST', body: JSON.stringify({ rating }),
+    });
+    emitSync(['reservations', 'analytics']);
+    return result;
+  },
   getPayPalConfig: () => apiRequest<any>('/paypal/config'),
   createPayPalOrder: (reservation_id: string) => apiRequest<any>('/paypal/orders', { method: 'POST', body: JSON.stringify({ reservation_id }) }),
   capturePayPalOrder: async (order_id: string) => {

@@ -5,13 +5,13 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, select, desc
+from sqlalchemy import delete, select, desc, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.models.entities import (
     User, MerchantProfile, Workshop, WorkshopSession, WorkshopDetails,
-    Reservation, ReservationHold, AttendanceRecord, RewardCampaign, OfferProposal, AuditLog, Notification, ReservationReschedule
+    Reservation, ReservationHold, AttendanceRecord, RewardCampaign, OfferProposal, AuditLog, Notification, ReservationReschedule, WorkshopReview
 )
 from app.schemas.workshop import WorkshopCreate, WorkshopUpdate, WorkshopResponse
 from app.schemas.reward import CampaignCreate, CampaignUpdate, CampaignResponse
@@ -328,6 +328,21 @@ async def list_merchant_workshops(
         )
         for w in workshops
     ]
+
+
+@router.get("/ratings")
+async def get_merchant_rating_summary(
+    user: User = Depends(get_current_instructor),
+    db: AsyncSession = Depends(get_db),
+):
+    if not user.merchant_profile:
+        raise HTTPException(400, "Instructor profile not configured.")
+    average, count = (await db.execute(
+        select(func.avg(WorkshopReview.rating), func.count(WorkshopReview.id))
+        .join(Workshop, Workshop.id == WorkshopReview.workshop_id)
+        .where(Workshop.merchant_id == user.merchant_profile.id)
+    )).one()
+    return {"average": round(float(average), 1) if average is not None else None, "count": count}
 
 @router.get("/reservations")
 async def list_merchant_reservations(

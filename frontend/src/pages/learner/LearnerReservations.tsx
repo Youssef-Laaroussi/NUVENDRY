@@ -6,7 +6,7 @@ import {
   Calendar, Clock, Users, Monitor, MapPin, CheckCircle2, 
   AlertCircle, XCircle, ChevronRight, ChevronLeft, ChevronDown, 
   MoreHorizontal, RefreshCw, Zap, Award, Layers, ArrowRight, 
-  Check, Loader2
+  Check, Loader2, Star
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -32,6 +32,8 @@ interface DisplayReservation {
   status: 'confirmed' | 'upcoming' | 'completed' | 'cancelled';
   statusLabel: string;
   image: string;
+  attended: boolean;
+  review_rating: number | null;
 }
 
 function displayReservation(reservation: Reservation): DisplayReservation {
@@ -57,6 +59,8 @@ function displayReservation(reservation: Reservation): DisplayReservation {
     status: cancelled ? 'cancelled' : completed ? 'completed' : confirmed ? 'confirmed' : 'upcoming',
     statusLabel: cancelled ? 'Cancelled' : completed ? 'Past session' : reservation.reschedule_status === 'requested' ? 'Reschedule pending' : confirmed ? 'Confirmed' : 'Pending payment',
     image: workshop?.image_url?.trim() || (/spatial|geo/i.test(category) ? workshopSpatial : /llm|agent/i.test(category) ? workshopLanggraph : workshopMlops),
+    attended: reservation.attended === true,
+    review_rating: reservation.review_rating ?? null,
   };
 }
 
@@ -73,6 +77,20 @@ export const LearnerReservations: React.FC = () => {
   const [reschedulingItem, setReschedulingItem] = useState<DisplayReservation | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  async function rateReservation(reservationId: string, rating: number) {
+    setIsProcessing(true);
+    setFeedback(null);
+    try {
+      await api.submitReservationReview(reservationId, rating);
+      setServerReservations(rows => rows.map(row => row.id === reservationId ? { ...row, review_rating: rating } : row));
+      setFeedback({ type: 'success', message: 'Thanks — your rating was saved.' });
+    } catch (error) {
+      setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Could not save your rating.' });
+    } finally {
+      setIsProcessing(false);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -424,6 +442,21 @@ export const LearnerReservations: React.FC = () => {
                     )}
                     <span>{item.location}</span>
                   </div>
+                  {item.attended && (
+                    <div className="flex items-center gap-2 pt-1 text-[11px] text-gray-600">
+                      <span>{item.review_rating ? `Your rating: ${item.review_rating}/5` : 'Rate this workshop:'}</span>
+                      <div className="flex items-center gap-0.5" role="group" aria-label={`Rate ${item.title}`}>
+                        {[1, 2, 3, 4, 5].map(rating => (
+                          <button key={rating} type="button" disabled={isProcessing}
+                            onClick={() => void rateReservation(item.id, rating)}
+                            aria-label={`${rating} star${rating === 1 ? '' : 's'}`}
+                            className="p-0.5 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded">
+                            <Star className={`w-4 h-4 ${item.review_rating && rating <= item.review_rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Right Side: Status Badge + Action Buttons */}

@@ -114,6 +114,7 @@ export interface Reservation {
   workshop_id: string;
   workshop_title?: string;
   attended?: boolean | null;
+  review_rating?: number | null;
   reschedule_status?: string | null;
   workshop?: Pick<Workshop, 'image_url' | 'description' | 'category' | 'difficulty' | 'scheduled_at' | 'duration_hours' | 'total_seats' | 'remaining_seats'> | null;
   user_id: string;
