@@ -53,6 +53,10 @@ async def test_paypal_order_creation_and_capture_flow(client, db_session):
     )
     assert order_resp.status_code == 200, order_resp.text
     paypal_order_id = order_resp.json()["paypal_order_id"]
+    retried_order = await client.post("/api/v1/paypal/orders", json={"reservation_id": reservation_id}, headers=headers)
+    assert retried_order.status_code == 200
+    assert retried_order.json()["paypal_order_id"] == paypal_order_id
+
     assert paypal_order_id.startswith("SANDBOX-ORDER-") or len(paypal_order_id) > 5
     
     # 3. Capture PayPal Order

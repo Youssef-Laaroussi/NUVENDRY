@@ -157,10 +157,7 @@ export const DemandIntelligencePreview: React.FC<Props> = ({ clusters = [] }) =>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center mb-8">
           {/* Left Title & Description */}
           <div className="lg:col-span-7 space-y-3.5">
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#E5F3EB] text-[#14533C] text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-[#14533C] stroke-[2]" />
-              <span>AI Demand Intelligence</span>
-            </div>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#14533c]">AI DEMAND INTELLIGENCE</span>
 
             <h2 className="text-3xl sm:text-4xl lg:text-[46px] font-serif font-medium text-[#111827] tracking-tight leading-[1.12]">
               AI Demand Intelligence{' '}

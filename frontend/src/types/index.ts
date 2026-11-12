@@ -72,6 +72,9 @@ export interface OfferProposal {
 }
 
 export interface Workshop {
+  image_url?: string | null;
+  language?: string | null;
+  delivery_format?: string | null;
   id: string;
   merchant_id: string;
   offer_id?: string;
@@ -88,6 +91,7 @@ export interface Workshop {
   is_published: boolean;
   created_at: string;
   merchant_name?: string;
+  instructor_name?: string | null;
 }
 
 export interface ReservationQuote {
@@ -109,6 +113,9 @@ export interface Reservation {
   id: string;
   workshop_id: string;
   workshop_title?: string;
+  attended?: boolean | null;
+  reschedule_status?: string | null;
+  workshop?: Pick<Workshop, 'image_url' | 'description' | 'category' | 'difficulty' | 'scheduled_at' | 'duration_hours' | 'total_seats' | 'remaining_seats'> | null;
   user_id: string;
   final_amount_cents: number;
   currency: string;
@@ -221,3 +228,11 @@ export interface ResearchExperiment {
   created_at: string;
 }
 
+
+export interface AdvisorTurn {
+  id: string;
+  question: string;
+  answer: string;
+  sources: { id: string; title: string }[];
+  mode: 'model' | 'catalog';
+}

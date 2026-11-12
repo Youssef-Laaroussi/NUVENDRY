@@ -1,171 +1,62 @@
-import React, { useState, useEffect } from 'react';
+import { PasswordChangeForm } from '../../components/PasswordChangeForm';
+import { createPortal } from 'react-dom';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
-import { ShieldCheck, Mail, DollarSign, Store, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowRight, Bell, Building2, Calendar, CalendarDays, Camera, Check, ChevronRight, Database, ExternalLink, Info, KeyRound, Laptop, Layers, Link as LinkIcon, LockKeyhole, Megaphone, MoreHorizontal, Palette, Settings, ShieldCheck, SlidersHorizontal, Sun, Trash2, Upload, User, Users, X } from 'lucide-react';
+import avatar from '../../assets/sidebar-hills-ai.jpg';
+import paypal from '../../assets/paypal-logo.svg';
+import './MerchantSettings.css';
 
-export const MerchantSettings: React.FC = () => {
-  const { user, refreshUser } = useAuth();
-  const merchant = user?.merchant_profile;
-
-  const initialBusinessName = merchant?.business_name || `${user?.full_name || 'Instructor'}'s Academy`;
-  const initialReceiverEmail = merchant?.paypal_receiver_email || user?.email || '';
-
-  const [businessName, setBusinessName] = useState(initialBusinessName);
-  const [receiverEmail, setReceiverEmail] = useState(initialReceiverEmail);
-  const [saving, setSaving] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-
-  useEffect(() => {
-    setBusinessName(merchant?.business_name || `${user?.full_name || 'Instructor'}'s Academy`);
-    setReceiverEmail(merchant?.paypal_receiver_email || user?.email || '');
-  }, [merchant?.business_name, merchant?.paypal_receiver_email, user?.full_name, user?.email]);
-
-  const isDirty =
-    businessName.trim() !== initialBusinessName.trim() ||
-    receiverEmail.trim() !== initialReceiverEmail.trim();
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isDirty || saving) return;
-    if (businessName.trim().length < 2) {
-      setFeedback({ type: 'error', message: 'Business name must be at least 2 characters.' });
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(receiverEmail.trim())) {
-      setFeedback({ type: 'error', message: 'Please enter a valid PayPal Sandbox receiver email.' });
-      return;
-    }
-    setSaving(true);
-    setFeedback(null);
-    try {
-      await api.updateProfile({
-        business_name: businessName.trim(),
-        paypal_receiver_email: receiverEmail.trim(),
-      });
-      await refreshUser();
-      setFeedback({ type: 'success', message: 'Merchant credentials saved.' });
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: err.message || 'Failed to update merchant settings.' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-serif text-charcoal">Merchant Settings & Credentials</h1>
-          <p className="text-xs text-charcoal/60">
-            Configure your teaching profile, business entity name, and PayPal receiver email.
-          </p>
-        </div>
-
-        <form onSubmit={handleSave} className="bg-white rounded-2xl border border-warmgray p-6 sm:p-8 space-y-6 shadow-xs max-w-2xl">
-          {feedback && (
-            <div
-              role={feedback.type === 'error' ? 'alert' : 'status'}
-              className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
-                feedback.type === 'error'
-                  ? 'bg-red-50 border-red-200 text-red-700'
-                  : 'bg-mint/50 border-forest/20 text-forest font-medium'
-              }`}
-            >
-              {feedback.type === 'error' ? (
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-              ) : (
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-forest" />
-              )}
-              <span>{feedback.message}</span>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="merchant-business-name" className="text-xs font-medium text-charcoal/70 mb-1 block">
-                Business / Academy Name
-              </label>
-              <div className="relative">
-                <input
-                  id="merchant-business-name"
-                  type="text"
-                  value={businessName}
-                  onChange={(e) => {
-                    setBusinessName(e.target.value);
-                    if (feedback) setFeedback(null);
-                  }}
-                  className="w-full pl-9 pr-3 py-2 bg-ivory border border-warmgray rounded-xl text-xs text-charcoal font-semibold focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-forest"
-                />
-                <Store className="w-4 h-4 text-charcoal/40 absolute left-3 top-2.5" />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="merchant-primary-email" className="text-xs font-medium text-charcoal/70 mb-1 block">
-                Instructor Primary Email
-              </label>
-              <div className="relative">
-                <input
-                  id="merchant-primary-email"
-                  type="email"
-                  readOnly
-                  value={user?.email || ''}
-                  className="w-full pl-9 pr-3 py-2 bg-ivory border border-warmgray rounded-xl text-xs text-charcoal/75 select-all"
-                />
-                <Mail className="w-4 h-4 text-charcoal/40 absolute left-3 top-2.5" />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="merchant-receiver-email" className="text-xs font-medium text-charcoal/70 mb-1 block">
-                PayPal Sandbox Receiver Email
-              </label>
-              <div className="relative">
-                <input
-                  id="merchant-receiver-email"
-                  type="email"
-                  value={receiverEmail}
-                  onChange={(e) => {
-                    setReceiverEmail(e.target.value);
-                    if (feedback) setFeedback(null);
-                  }}
-                  className="w-full pl-9 pr-3 py-2 bg-ivory border border-warmgray rounded-xl text-xs text-charcoal focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-forest"
-                />
-                <DollarSign className="w-4 h-4 text-charcoal/40 absolute left-3 top-2.5" />
-              </div>
-              <span className="text-[10px] text-charcoal/50 mt-1 block">
-                Direct receiver email registered for Sandbox settlement.
-              </span>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-charcoal/70 mb-1 block">Instructor Rating</label>
-              <div className="text-sm font-bold font-mono text-charcoal flex items-center gap-1.5">
-                <span>⭐ {merchant?.rating || '5.00'} / 5.00</span>
-                <span className="text-[10px] font-normal text-forest bg-mint px-2 py-0.5 rounded-full font-sans">
-                  Verified Educator
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-warmgray/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-charcoal/60">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-forest shrink-0" />
-              <span>PayPal Sandbox Integration is configured for Orders v2 captures.</span>
-            </div>
-
-            <button
-              type="submit"
-              disabled={!isDirty || saving}
-              className="nv-btn-press px-4 py-2 rounded-xl bg-forest text-ivory text-xs font-semibold hover:bg-charcoal disabled:opacity-45 transition-colors inline-flex items-center justify-center gap-1.5 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
-            >
-              {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>{saving ? 'Saving...' : 'Save Settings'}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </>
-  );
-};
+type SettingsDraft={academy:string;payout:string;legal:string;type:string;tax:string;address:string;city:string;state:string;postal:string;country:string;zone:string;language:string;brand:string;accent:string;logo:string;photo:string;notifications:boolean[];view:string;appearance:string;week:string};
+const defaults:SettingsDraft={academy:'Nuvendry Learning Center',payout:'payouts@nuvendry.dev',legal:'Nuvendry Education LLC',type:'LLC (Limited Liability Company)',tax:'83-2190456',address:'500 Innovation Way, Suite 200',city:'San Francisco',state:'CA',postal:'94107',country:'United States',zone:'(UTC−08:00) Pacific Time (US & Canada)',language:'English (US)',brand:'#0A6B3F',accent:'#C6F2D1',logo:'default',photo:'',notifications:[true,true,true,false],view:'List (Detailed)',appearance:'System (Auto)',week:'Monday'};
+function Field({label,required,children}:{label:string;required?:boolean;children:ReactNode}){return <label className="settings-field"><span>{label} {required&&<b>*</b>}</span>{children}</label>}
+function Title({icon:Icon,title,description}:{icon:typeof User;title:string;description:string}){return <div className="settings-title"><Icon/><div><h2>{title}</h2><p>{description}</p></div></div>}
+export function MerchantSettings(){
+ const {user,refreshUser}=useAuth();
+ const storageKey='nuvendry-instructor-settings-'+(user?.id||'demo');
+ const [draft,setDraft]=useState<SettingsDraft>(defaults);
+ const [saved,setSaved]=useState<SettingsDraft>(defaults);
+ const [tab,setTab]=useState('Profile');
+ const [saving,setSaving]=useState(false);
+ const [feedback,setFeedback]=useState('');
+ const [modal,setModal]=useState('');
+ const logoInput=useRef<HTMLInputElement>(null),photoInput=useRef<HTMLInputElement>(null);
+ useEffect(()=>{
+  let local:Partial<SettingsDraft>={};try{local=JSON.parse(localStorage.getItem(storageKey)||'{}')}catch{/* Use defaults if browser storage is unavailable. */}
+  const initial={...defaults,...local,academy:user?.merchant_profile?.business_name||local.academy||defaults.academy,payout:user?.merchant_profile?.paypal_receiver_email||local.payout||(user?user.email:defaults.payout)};
+  setDraft(initial);setSaved(initial);
+  let active=true;
+  if(user) api.getWorkspaceSettings().then(data=>{if(active && data.instructor){const loaded={...initial,...data.instructor};setDraft(loaded);setSaved(loaded)}}).catch(()=>setFeedback('Could not load saved settings. Please reload before making changes.'));
+  return()=>{active=false};
+ },[storageKey,user?.merchant_profile?.business_name,user?.merchant_profile?.paypal_receiver_email,user?.email]);
+ useEffect(()=>{if(!modal)return;const close=(e:KeyboardEvent)=>{if(e.key==='Escape')setModal('')};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close)},[modal]);
+ function update<K extends keyof SettingsDraft>(key:K,value:SettingsDraft[K]){setDraft(d=>({...d,[key]:value}));setFeedback('')}
+ const input=(key:keyof SettingsDraft,type='text',required=false)=><input type={type} required={required} value={String(draft[key])} onChange={e=>update(key,e.target.value as never)}/>;
+ const select=(key:keyof SettingsDraft,options:string[])=><select value={String(draft[key])} onChange={e=>update(key,e.target.value as never)}>{options.map(o=><option key={o}>{o}</option>)}</select>;
+ async function save(e:FormEvent){e.preventDefault();if(saving)return;setSaving(true);setFeedback('');try{
+  if(draft.academy.trim().length<2)throw new Error('Academy name must contain at least 2 characters.');
+  if(!/^#[0-9a-f]{6}$/i.test(draft.brand)||!/^#[0-9a-f]{6}$/i.test(draft.accent))throw new Error('Use a six-digit hex code for each brand color.');
+  if(user){await api.updateProfile({business_name:draft.academy.trim(),paypal_receiver_email:draft.payout.trim()});await refreshUser();const previous=await api.getWorkspaceSettings();await api.saveWorkspaceSettings({...previous,instructor:draft})}
+  localStorage.setItem(storageKey,JSON.stringify(draft));setSaved({...draft});setFeedback(user?'Profile and studio preferences saved to your account.':'Demo settings saved in this browser.');
+ }catch(err){setFeedback(err instanceof Error?err.message:'Unable to save settings.')}finally{setSaving(false)}}
+ function upload(file:File|undefined,key:'logo'|'photo'){if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>5*1024*1024){setFeedback('Choose a PNG, JPG, or WebP image up to 5 MB.');return}const reader=new FileReader();reader.onload=()=>update(key,String(reader.result));reader.readAsDataURL(file)}
+ function navigateSection(name:string){setTab(name);const id=({'Profile':'settings-profile','Business Identity':'settings-business','Notifications':'settings-notifications','Payouts':'settings-payout','Integrations':'settings-integrations'} as Record<string,string>)[name];document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'nearest'})}
+ return <form className="instructor-settings" onSubmit={save}>
+ <header className="studio-hero settings-hero"><h1>Settings <Settings/></h1><p>Manage your instructor profile, academy identity, notifications, payouts, integrations, and creator preferences.</p></header>
+ <div className="settings-columns"><div className="settings-left"><nav className="settings-tabs" aria-label="Settings sections">{[{name:'Profile',icon:User},{name:'Business Identity',icon:Building2},{name:'Notifications',icon:Bell},{name:'Payouts',icon:Database},{name:'Integrations',icon:LinkIcon}].map(({name,icon:Icon})=><button type="button" key={name} aria-current={tab===name?'page':undefined} onClick={()=>navigateSection(name)}><Icon/>{name}</button>)}</nav>
+ <section className="settings-card settings-profile" id="settings-profile"><div className="settings-profile-top"><div className="settings-avatar"><img src={draft.photo||avatar} alt="Academy profile"/><button type="button" aria-label="Replace profile photo" onClick={()=>photoInput.current?.click()}><Camera size={18}/></button></div><div><Title icon={User} title="Profile & Academy" description="Your instructor profile and how your academy appears to learners."/><Field label="Academy Name" required>{input('academy','text',true)}</Field></div></div>
+ <div className="settings-grid"><Field label="Instructor Email" required><input type="email" value={user?.email||'elena.park@nuvendry.dev'} readOnly aria-label="Instructor Email"/></Field><div id="settings-payout"><Field label="Payout Email" required>{input('payout','email',true)}</Field></div><Field label="Time Zone" required>{select('zone',[defaults.zone,'(UTC+00:00) UTC','(UTC+01:00) Casablanca','(UTC+01:00) Paris','(UTC−05:00) Eastern Time (US & Canada)'])}</Field><Field label="Language" required>{select('language',['English (US)','Français','العربية'])}</Field></div>
+ <section className="settings-divider" id="settings-business"><Title icon={Building2} title="Business Details" description="Official business information for payouts, receipts, and compliance."/><div className="settings-grid"><Field label="Legal Business Name" required>{input('legal','text',true)}</Field><Field label="Business Type" required>{select('type',[defaults.type,'Sole Proprietorship','Corporation','Nonprofit'])}</Field><Field label="Tax ID / EIN">{input('tax')}</Field><Field label="Business Address" required>{input('address','text',true)}</Field></div><div className="settings-address"><Field label="City" required>{input('city','text',true)}</Field><Field label="State / Province" required>{input('state','text',true)}</Field><Field label="Postal Code" required>{input('postal','text',true)}</Field><Field label="Country" required>{select('country',['United States','Morocco','France','Canada','United Kingdom'])}</Field></div></section>
+ <section className="settings-divider settings-branding"><Title icon={Palette} title="Branding" description="Customize your academy’s brand, which appears on your marketplace, bookings, and communications."/><div className="settings-brand-grid"><div><span className="settings-label">Logo <Info size={13}/></span><div className="settings-logo-row"><div className="settings-logo">{draft.logo==='default'?<><span className="w-8 h-8 rounded-lg bg-[#0e3c2f] flex shrink-0 items-center justify-center text-white font-bold text-base" aria-hidden="true">N</span><b>NUVENDRY<sup>™</sup></b></>:draft.logo?<img src={draft.logo} alt="Academy logo"/>:<span>No logo</span>}</div><div><div className="settings-logo-actions"><button type="button" onClick={()=>logoInput.current?.click()}><Upload size={14}/>Replace Logo</button><button type="button" onClick={()=>update('logo','')}><Trash2 size={14}/>Remove</button></div><small>PNG, JPG, or WebP · Up to 5 MB · Recommended: 400 × 160 px</small></div></div></div>{(['brand','accent'] as const).map((key,i)=><Field key={key} label={i?'Accent Color':'Brand Color'}><div className="settings-color"><input aria-label={i?'Accent color picker':'Brand color picker'} type="color" value={/^#[0-9a-f]{6}$/i.test(draft[key])?draft[key]:'#0a6b3f'} onChange={e=>update(key,e.target.value.toUpperCase())}/>{input(key)}</div></Field>)}</div></section>
+ </section></div>
+ <aside className="settings-right"><section className="settings-card" id="settings-integrations"><Title icon={Layers} title="Integration Status" description="Connect and manage third-party services for bookings, payments, and automation."/><div className="settings-paypal"><img src={paypal} alt="PayPal"/><div><strong>PayPal Sandbox Orders v2</strong><p>Sandbox mode · Order capture, payouts, and refunds (v2)</p><small>{user?'Sandbox receiver: '+draft.payout:'Connected on Nov 14, 2026, 3:22 PM　·　Last sync: 2 min ago'}</small></div><span className="settings-badge"><Check size={13}/>{user?'Sandbox':'Connected'}</span><button type="button" aria-label="Integration options" onClick={()=>setModal('Integration Details')}><MoreHorizontal size={17}/></button></div><button type="button" className="settings-text-action" onClick={()=>setModal('Integration Details')}><ExternalLink size={16}/>View Integration Details <ArrowRight size={14}/></button></section>
+ <section className="settings-card" id="settings-notifications"><Title icon={Bell} title="Notifications" description="Choose what you want to be notified about."/>{[{icon:Calendar,title:'New reservations',text:'Get notified when a learner books a workshop.'},{icon:Users,title:'Booking changes & cancellations',text:'Updates when a reservation is rescheduled or canceled.'},{icon:Layers,title:'Payout updates',text:'Status changes, transfers, and payout confirmations.'},{icon:Megaphone,title:'Platform & product updates',text:'New features, improvements, and important announcements.'}].map(({icon:Icon,title,text},i)=><div className="settings-option" key={title}><i><Icon/></i><div><strong>{title}</strong><p>{text}</p></div><button type="button" role="switch" aria-label={title} aria-checked={draft.notifications[i]} className="settings-switch" onClick={()=>update('notifications',draft.notifications.map((v,j)=>i===j?!v:v))}><span/></button></div>)}</section>
+ <section className="settings-card"><Title icon={ShieldCheck} title="Security" description="Keep your account and business data safe."/><button type="button" className="settings-option settings-security" onClick={()=>setModal('Password')}><i><KeyRound/></i><strong>Password</strong><span>{user?'Manage password':'Last updated Oct 10, 2026'}</span><ChevronRight size={16}/></button><button type="button" className="settings-option settings-security" onClick={()=>setModal('Two-Factor Authentication')}><i><LockKeyhole/></i><strong>Two-Factor Authentication (2FA)</strong><span className={user?'':'settings-badge'}>{user?'View options':'♧ Enabled'}</span><ChevronRight size={16}/></button></section>
+ <section className="settings-card"><Title icon={SlidersHorizontal} title="Preferences" description="Platform and workspace preferences for your Instructor Studio."/>{[{icon:Laptop,label:'Default Workshop View',key:'view',options:['List (Detailed)','Grid (Cards)']},{icon:Sun,label:'Appearance',key:'appearance',options:['System (Auto)','Light','Dark']},{icon:CalendarDays,label:'Week Starts On',key:'week',options:['Monday','Sunday','Saturday']}].map(({icon:Icon,label,key,options})=><label className="settings-option settings-preference" key={key}><i><Icon/></i><strong>{label}</strong>{select(key as keyof SettingsDraft,options)}</label>)}</section></aside></div>
+ {feedback&&<p className="settings-feedback" role="status">{feedback}</p>}
+ <footer className="settings-footer"><Info size={17}/><p>Your changes will update your instructor profile, academy, notifications, payouts, and integrations.</p><button type="button" onClick={()=>{setDraft({...saved});setFeedback('Changes discarded.')}}>Discard Changes</button><button type="submit" className="settings-save" disabled={saving}><Check size={18}/>{saving?'Saving…':'Save Settings'}</button></footer>
+ <input hidden ref={logoInput} type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>upload(e.target.files?.[0],'logo')}/><input hidden ref={photoInput} type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>upload(e.target.files?.[0],'photo')}/>
+ {modal&&createPortal(<div className="settings-modal-backdrop" onClick={()=>setModal('')}><section className="settings-modal" role="dialog" aria-modal="true" aria-label={modal} onClick={e=>e.stopPropagation()}><button type="button" autoFocus aria-label="Close details" onClick={()=>setModal('')}><X/></button><h2>{modal}</h2>{modal==='Password'?<PasswordChangeForm/>:<p>{modal==='Integration Details'?`PayPal Orders v2 uses the sandbox receiver ${draft.payout}. The reference connection status is demonstration data; live connection health is not available from the current API.`:'Two-factor setup is not supported by the current account API. The demo badge does not indicate protection on your live account.'}</p>}<button type="button" onClick={()=>setModal('')}>Close</button></section></div>,document.body)}
+ </form>;
+}

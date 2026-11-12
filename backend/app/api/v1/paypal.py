@@ -1,5 +1,6 @@
 import uuid
 import logging
+from decimal import Decimal, InvalidOperation
 from datetime import datetime, timezone
 from typing import Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
@@ -10,7 +11,7 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.models.entities import (
     User, Workshop, Reservation, PaymentOrder, PaymentCapture,
-    WebhookEvent, AuditLog, Notification
+    WebhookEvent, AuditLog, Notification, ReservationHold, MerchantProfile
 )
 from app.schemas.payment import (
     PayPalConfigResponse, PayPalOrderCreate, PayPalOrderResponse,
@@ -30,7 +31,7 @@ async def get_paypal_config():
     Secrets are strictly protected server-side.
     """
     return PayPalConfigResponse(
-        client_id=settings.PAYPAL_CLIENT_ID or "sb_mock_client_id_for_eval",
+        client_id=settings.PAYPAL_CLIENT_ID or "",
         environment=settings.PAYPAL_ENV,
         currency="USD"
     )
@@ -48,17 +49,31 @@ async def create_paypal_order(
         select(Reservation)
         .options(selectinload(Reservation.workshop))
         .where(Reservation.id == req.reservation_id, Reservation.user_id == user.id)
+        .with_for_update()
     )
     reservation = (await db.execute(stmt)).scalar_one_or_none()
     if not reservation:
         raise HTTPException(status_code=404, detail="Reservation not found or unauthorized.")
         
-    if reservation.status == "confirmed":
+    if reservation.status != "pending_payment":
         raise HTTPException(status_code=400, detail="Reservation has already been paid and confirmed.")
         
+    if reservation.final_amount_cents <= 0:
+        raise HTTPException(409, "This reservation has no payable balance.")
+
     # Re-verify seats
-    if reservation.workshop.remaining_seats <= 0:
-        raise HTTPException(status_code=400, detail="No seats remaining in workshop.")
+    if reservation.workshop.remaining_seats <= 0 or not reservation.workshop.is_published:
+        raise HTTPException(409, "This workshop is no longer available.")
+    if reservation.paypal_order_id:
+        existing_order = await db.scalar(select(PaymentOrder).where(
+            PaymentOrder.paypal_order_id == reservation.paypal_order_id,
+            PaymentOrder.reservation_id == reservation.id,
+        ))
+        if existing_order and existing_order.status == "created":
+            return PayPalOrderResponse(
+                paypal_order_id=existing_order.paypal_order_id, status="CREATED",
+                amount_cents=existing_order.amount_cents, currency=existing_order.currency,
+            )
         
     # Call PayPal Orders v2
     order_data = await paypal_client.create_order(
@@ -71,17 +86,21 @@ async def create_paypal_order(
     paypal_order_id = order_data["id"]
     reservation.paypal_order_id = paypal_order_id
     
-    # Persist PaymentOrder
-    payment_order = PaymentOrder(
-        id=str(uuid.uuid4()),
-        reservation_id=reservation.id,
-        paypal_order_id=paypal_order_id,
-        amount_cents=reservation.final_amount_cents,
-        currency=reservation.currency,
-        status="created"
-    )
-    db.add(payment_order)
-    
+    # PayPal may return the same order after a retry of its idempotency key.
+    payment_order = await db.scalar(select(PaymentOrder).where(PaymentOrder.paypal_order_id == paypal_order_id))
+    if payment_order and (
+        payment_order.reservation_id != reservation.id
+        or payment_order.amount_cents != reservation.final_amount_cents
+        or payment_order.currency != reservation.currency
+        or payment_order.status != "created"
+    ):
+        raise HTTPException(409, "PayPal returned an order that cannot be used for this reservation.")
+    if not payment_order:
+        db.add(PaymentOrder(
+            id=str(uuid.uuid4()), reservation_id=reservation.id, paypal_order_id=paypal_order_id,
+            amount_cents=reservation.final_amount_cents, currency=reservation.currency, status="created",
+        ))
+
     await db.commit()
     
     approval_url = None
@@ -113,7 +132,7 @@ async def capture_paypal_order(
     stmt = (
         select(Reservation)
         .options(selectinload(Reservation.workshop))
-        .where(Reservation.paypal_order_id == order_id)
+        .where(Reservation.paypal_order_id == order_id, Reservation.user_id == user.id)
         .with_for_update()
     )
     reservation = (await db.execute(stmt)).scalar_one_or_none()
@@ -132,39 +151,43 @@ async def capture_paypal_order(
             confirmed_at=reservation.confirmed_at or datetime.now(timezone.utc)
         )
 
-    # 2. Call PayPal Capture API
+    if reservation.status != "pending_payment":
+        raise HTTPException(409, "Only pending reservations can be paid.")
+    # Lock inventory BEFORE contacting PayPal, so a sold-out session is not charged.
+    workshop = (await db.execute(select(Workshop).where(
+        Workshop.id == reservation.workshop_id).with_for_update())).scalar_one()
+    if workshop.remaining_seats <= 0 or not workshop.is_published:
+        raise HTTPException(409, "This workshop is no longer available. No capture was attempted.")
+    quote_audit_stmt = (
+        select(AuditLog)
+        .where(
+            AuditLog.resource_type == "Reservation",
+            AuditLog.resource_id == reservation.id,
+            AuditLog.action.in_(["RESERVATION_QUOTE_APPLIED", "RESERVATION_INITIATED"])
+        )
+        .order_by(desc(AuditLog.created_at))
+    )
+    quote_audit = (await db.execute(quote_audit_stmt)).scalars().first()
+    saved_quote = (quote_audit.details or {}).get("quote") if quote_audit else None
+    if saved_quote:
+        await reward_engine.validate_checkout_funding(db, reservation, saved_quote)
     capture_resp = await paypal_client.capture_order(order_id)
-    capture_status = capture_resp.get("status")
-    
-    # Extract capture ID from purchase units
-    paypal_capture_id = f"CAP-{uuid.uuid4().hex[:12].upper()}"
     try:
-        pu = capture_resp.get("purchase_units", [])[0]
-        payments = pu.get("payments", {})
-        captures = payments.get("captures", [])
-        if captures:
-            paypal_capture_id = captures[0].get("id", paypal_capture_id)
-            capture_status = captures[0].get("status", capture_status)
-    except Exception as e:
-        logger.warning(f"Could not parse nested capture unit from response: {e}")
-        
-    if capture_status != "COMPLETED":
-        raise HTTPException(
-            status_code=400,
-            detail=f"PayPal transaction not completed. Status: {capture_status}"
-        )
+        captures = [capture for unit in capture_resp["purchase_units"]
+                    for capture in unit.get("payments", {}).get("captures", [])]
+        if len(captures) != 1:
+            raise ValueError("Expected one capture")
+        capture = captures[0]
+        paypal_capture_id = capture["id"]
+        amount = Decimal(capture["amount"]["value"]) * 100
+        valid = (capture_resp.get("id") == order_id and capture["status"] == "COMPLETED"
+                 and bool(paypal_capture_id) and amount == reservation.final_amount_cents
+                 and capture["amount"]["currency_code"] == reservation.currency)
+        if not valid:
+            raise ValueError("Capture mismatch")
+    except (KeyError, TypeError, ValueError, InvalidOperation) as exc:
+        raise HTTPException(409, "Capture not verified against this reservation. Contact support before retrying.") from exc
 
-    # 3. Lock Workshop and Decrement Seat Capacity Safely
-    ws_stmt = select(Workshop).where(Workshop.id == reservation.workshop_id).with_for_update()
-    workshop = (await db.execute(ws_stmt)).scalar_one()
-    
-    if workshop.remaining_seats <= 0:
-        logger.error(f"Overselling prevention triggered for workshop {workshop.id}")
-        raise HTTPException(
-            status_code=409,
-            detail="Seat allocation conflict: workshop capacity reached. Automatic refund required."
-        )
-        
     workshop.remaining_seats -= 1
     
     # 4. Finalize Reservation
@@ -172,6 +195,13 @@ async def capture_paypal_order(
     reservation.status = "confirmed"
     reservation.paypal_capture_id = paypal_capture_id
     reservation.confirmed_at = now
+    holds = await db.scalars(select(ReservationHold).where(
+        ReservationHold.workshop_id == reservation.workshop_id,
+        ReservationHold.user_id == reservation.user_id,
+        ReservationHold.status == "active",
+    ))
+    for hold in holds:
+        hold.status = "released"
     
     # Update payment order record
     po_stmt = select(PaymentOrder).where(PaymentOrder.paypal_order_id == order_id)
@@ -191,17 +221,6 @@ async def capture_paypal_order(
         ))
         
     # 5. Consume Applied Checkout Discounts/Credits & Process Post-Payment Rewards
-    quote_audit_stmt = (
-        select(AuditLog)
-        .where(
-            AuditLog.resource_type == "Reservation",
-            AuditLog.resource_id == reservation.id,
-            AuditLog.action.in_(["RESERVATION_QUOTE_APPLIED", "RESERVATION_INITIATED"])
-        )
-        .order_by(desc(AuditLog.created_at))
-    )
-    quote_audit = (await db.execute(quote_audit_stmt)).scalars().first()
-    saved_quote = (quote_audit.details or {}).get("quote") if quote_audit else None
     if saved_quote:
         await reward_engine.consume_rewards_on_payment_success(
             db=db,
@@ -226,6 +245,19 @@ async def capture_paypal_order(
         link=f"/app/reservations"
     ))
     
+    merchant = await db.get(MerchantProfile, workshop.merchant_id)
+    if merchant:
+        db.add(Notification(
+            user_id=merchant.user_id,
+            title="New workshop reservation",
+            message=(
+                f"{user.full_name or user.email} reserved '{workshop.title}' "
+                f"and paid {reservation.final_amount_cents / 100:.2f} {reservation.currency}. "
+                f"Reservation reference: {reservation.id}."
+            ),
+            link="/merchant/reservations",
+        ))
+
     # Audit log
     db.add(AuditLog(
         user_id=user.id,
@@ -279,7 +311,12 @@ async def receive_paypal_webhook(
     if existing:
         return {"status": "ignored", "detail": "Event already processed"}
         
-    # Verify signature if production/configured
+    # Missing signatures/configuration must never bypass verification.
+    if not settings.PAYPAL_WEBHOOK_ID:
+        raise HTTPException(503, "PayPal webhook verification is not configured.")
+    if not all([paypal_transmission_id, paypal_transmission_time, paypal_cert_url,
+                paypal_auth_algo, paypal_transmission_sig]):
+        raise HTTPException(400, "Missing PayPal signature headers.")
     if settings.PAYPAL_WEBHOOK_ID and paypal_transmission_sig:
         is_valid = await paypal_client.verify_webhook_signature(
             transmission_id=paypal_transmission_id,
@@ -301,7 +338,7 @@ async def receive_paypal_webhook(
         event_type=event_type,
         resource_id=body.get("resource", {}).get("id"),
         payload=body,
-        status="processed"
+        status="verified"
     )
     db.add(wh_event)
     await db.commit()

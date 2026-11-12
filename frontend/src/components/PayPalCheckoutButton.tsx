@@ -1,109 +1,47 @@
-import React, { useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
+import { PayPalButtons, PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { api } from '../api/client';
-import { ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
 
-interface PayPalCheckoutButtonProps {
-  reservationId: string;
-  finalAmountCents: number;
-  currency: string;
-  workshopTitle: string;
-  disabled?: boolean;
-  onProcessingChange?: (processing: boolean) => void;
-  onSuccess: (captureData: any) => void;
-  onError?: (err: any) => void;
+interface Props {
+  reservationId: string; finalAmountCents: number; currency: string; workshopTitle: string;
+  disabled?: boolean; onProcessingChange?: (processing: boolean) => void;
+  onSuccess: (captureData: any) => void; onError?: (err: any) => void;
 }
-
-export const PayPalCheckoutButton: React.FC<PayPalCheckoutButtonProps> = ({
-  reservationId,
-  finalAmountCents,
-  currency,
-  disabled = false,
-  onProcessingChange,
-  onSuccess,
-  onError,
-}) => {
-  const [loading, setLoading] = useState(false);
-  const [stageLabel, setStageLabel] = useState<string>('Authorizing PayPal Sandbox Order...');
-  const [error, setError] = useState<string | null>(null);
-  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
-  const busyRef = useRef(false);
-
-  const handleInitiateAndCapture = async () => {
-    if (busyRef.current || loading || disabled) return;
-    busyRef.current = true;
-    setLoading(true);
-    onProcessingChange?.(true);
-    setError(null);
-
-    try {
-      // Reconcile existing uncaptured order ID if a previous capture attempt was interrupted
-      let orderId = pendingOrderId;
-      if (!orderId) {
-        setStageLabel('Creating PayPal Sandbox Order v2...');
-        const orderResp = await api.createPayPalOrder(reservationId);
-        orderId = orderResp.paypal_order_id;
-        setPendingOrderId(orderId);
-      }
-
-      if (!orderId) {
-        throw new Error('PayPal Sandbox did not return a valid order ID.');
-      }
-
-      setStageLabel('Verifying PayPal Sandbox Capture...');
-      const captureResp = await api.capturePayPalOrder(orderId);
-      setPendingOrderId(null);
-      onSuccess(captureResp);
-    } catch (err: any) {
-      console.error('PayPal checkout error:', err);
-      const msg = err.message || 'Payment capture failed. Your card/account was not charged.';
-      setError(msg);
-      if (onError) onError(err);
-    } finally {
-      busyRef.current = false;
-      setLoading(false);
-      onProcessingChange?.(false);
-    }
-  };
-
-  return (
-    <div className="w-full space-y-3">
-      {error && (
-        <div
-          role="alert"
-          className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-start gap-2"
-        >
-          <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={handleInitiateAndCapture}
-        disabled={loading || disabled}
-        className="nv-btn-press w-full py-3 px-4 bg-[#0070BA] hover:bg-[#003087] disabled:opacity-60 text-white font-medium text-sm rounded-xl flex items-center justify-center gap-2 transition-all shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0070BA] focus-visible:ring-offset-2"
-      >
-        {loading ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>{stageLabel}</span>
-          </>
-        ) : (
-          <>
-            <span className="font-bold italic text-base tracking-tight">PayPal</span>
-            <span>
-              {pendingOrderId ? 'Verify & Complete' : 'Pay'} ${(finalAmountCents / 100).toFixed(2)}{' '}
-              {currency} (Sandbox)
-            </span>
-          </>
-        )}
-      </button>
-
-      <div className="flex items-center justify-center gap-1.5 text-[11px] text-charcoal/60">
-        <ShieldCheck className="w-3.5 h-3.5 text-forest" />
-        <span>Authoritative Server-Verified PayPal Orders v2 Sandbox</span>
-      </div>
-    </div>
-  );
-};
-
+export function PayPalCheckoutButton({ reservationId, finalAmountCents, currency, disabled, onProcessingChange, onSuccess, onError }: Props) {
+  const [config, setConfig] = useState<{client_id:string}|null>(null);
+  const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let active = true;
+    api.getPayPalConfig().then(c => {
+      if (!active) return;
+      if (!c.client_id) { setError('PayPal sandbox is not configured yet. Your reservation remains unpaid.'); return; }
+      setConfig(c);
+    }).catch(() => active && setError('Could not load PayPal. Please retry.'));
+    return () => { active = false; };
+  }, [retry]);
+  function fail(err: unknown) {
+    setError(err instanceof Error ? err.message : 'Payment could not be verified. Retry to check its status.');
+    onProcessingChange?.(false); onError?.(err);
+  }
+  return <div className="space-y-3">
+    {error && <div role="alert" className="p-3 bg-red-50 text-red-700 rounded-xl text-sm">{error} <button type="button" onClick={() => {setError(''); setRetry(n=>n+1)}}>Retry</button></div>}
+    {config ? <PayPalScriptProvider options={{clientId:config.client_id, currency, intent:'capture'}}>
+      <PayPalButtons disabled={disabled} forceReRender={[reservationId, finalAmountCents, currency]} style={{layout:'vertical'}}
+        createOrder={async () => {
+          setError('');
+          const order = await api.createPayPalOrder(reservationId);
+          return order.paypal_order_id;
+        }}
+        onApprove={async data => {
+          onProcessingChange?.(true);
+          try {const capture = await api.capturePayPalOrder(data.orderID); onSuccess(capture);}
+          catch(err) {fail(err);}
+          finally {onProcessingChange?.(false);}
+        }}
+        onCancel={() => {onProcessingChange?.(false);setError('Checkout cancelled. Your reservation has not been confirmed.');}}
+        onError={fail}/>
+    </PayPalScriptProvider> : !error && <p role="status">Loading PayPal checkout…</p>}
+    <p className="text-xs text-charcoal/60">PayPal Sandbox · Confirm your payment in the PayPal window.</p>
+  </div>;
+}

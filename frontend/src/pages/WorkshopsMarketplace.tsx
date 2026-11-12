@@ -207,7 +207,7 @@ export const WorkshopsMarketplace: React.FC = () => {
           </div>
 
           {/* Category Filter Pills matching mock */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <div className="flex items-center gap-2 flex-wrap pb-1">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}

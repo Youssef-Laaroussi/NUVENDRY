@@ -120,7 +120,7 @@ export const DemandIntroPage: React.FC = () => {
         preferred_difficulty: parsed?.preferred_difficulty || 'intermediate',
         max_budget_cents: parsed?.max_budget_cents || 4000,
         language: parsed?.language || 'English',
-        preferred_schedule: parsed?.preferred_schedule || 'Weekend',
+        preferred_schedule: parsed?.preferred_schedule,
       });
       try {
         sessionStorage.removeItem('nv_demand_draft');

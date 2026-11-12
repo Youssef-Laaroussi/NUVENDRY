@@ -1,0 +1,97 @@
+.match-results {
+  container-type: inline-size;
+}
+
+.match-result {
+  display: grid;
+  grid-template-columns: clamp(64px, 25cqi, 124px) minmax(0, 1fr);
+  grid-template-areas:
+    "image details"
+    "score reasons"
+    "actions actions";
+}
+
+.match-result-image { grid-area: image; }
+.match-result-details { grid-area: details; overflow-wrap: anywhere; }
+.match-result-score { grid-area: score; }
+.match-result-reasons { grid-area: reasons; overflow-wrap: anywhere; }
+.match-result-actions { grid-area: actions; flex-wrap: wrap; }
+.match-result-buttons { flex-wrap: wrap; }
+
+@container (min-width: 690px) {
+  .match-result {
+    grid-template-columns: clamp(90px, 13cqi, 135px) minmax(0, 1.4fr) 72px minmax(0, 1fr) auto;
+    grid-template-areas: "image details score reasons actions";
+  }
+
+  .match-result-buttons { flex-direction: column; }
+
+  .match-result-reasons {
+    border-inline-start-width: 1px;
+    padding-inline-start: 12px;
+  }
+}
+
+.match-toolbar {
+  flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px;
+  border: 1px solid #e3e7e2;
+  border-radius: 16px;
+  background: #f8faf9;
+}
+
+.match-toolbar-filters {
+  flex-wrap: wrap;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 3px;
+  white-space: nowrap;
+}
+
+.match-toolbar-filters button {
+  box-shadow: 0 1px 3px #14211b12;
+}
+
+.match-toolbar-filters button[aria-pressed="true"] svg {
+  color: inherit;
+}
+
+.match-toolbar-sort {
+  margin-inline-start: auto;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border: 1px solid #e3e7e2;
+  border-radius: 999px;
+  background: white;
+  color: #4b5563;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.match-toolbar-sort select {
+  max-width: 110px;
+  background: transparent;
+  color: #14211b;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .match-toolbar {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .match-toolbar-filters {
+    flex-basis: 100%;
+  }
+}

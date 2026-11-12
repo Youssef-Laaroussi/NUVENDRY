@@ -46,3 +46,24 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()
+
+@pytest.fixture(autouse=True)
+def isolated_paypal_transport(monkeypatch):
+    """Only tests simulate PayPal. Production code always uses the real transport."""
+    from app.payments.paypal_client import paypal_client
+    from app.core.config import settings
+    import uuid
+    monkeypatch.setattr(settings, 'PAYPAL_CLIENT_ID', '')
+    monkeypatch.setattr(settings, 'PAYPAL_CLIENT_SECRET', '')
+    orders = {}
+    async def create_order(amount_cents, currency='USD', custom_id=None, description=''):
+        order_id = 'TEST-' + uuid.uuid4().hex[:16]
+        orders[order_id] = (amount_cents, currency)
+        return {'id':order_id, 'status':'CREATED'}
+    async def capture_order(order_id):
+        amount, currency = orders[order_id]
+        return {'id':order_id, 'status':'COMPLETED', 'purchase_units':[{'payments':{'captures':[
+            {'id':'CAP-'+order_id, 'status':'COMPLETED', 'amount':{'value':f'{amount/100:.2f}', 'currency_code':currency}}
+        ]}}]}
+    monkeypatch.setattr(paypal_client, 'create_order', create_order)
+    monkeypatch.setattr(paypal_client, 'capture_order', capture_order)

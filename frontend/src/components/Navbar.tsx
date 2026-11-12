@@ -142,9 +142,7 @@ export const Navbar: React.FC = () => {
           className="flex items-center space-x-2.5 group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-forest rounded-lg py-1 pr-2"
           aria-label="NUVENDRY Home"
         >
-          <div className="w-8 h-8 rounded-lg bg-[#0e3c2f] flex items-center justify-center text-white font-bold text-base shadow-xs">
-            N
-          </div>
+          <img src="/nuvendry-mark.png" alt="" className="w-8 h-8 shrink-0 rounded-md object-contain" />
           <span className="font-bold text-lg tracking-tight text-charcoal">NUVENDRY</span>
         </Link>
 

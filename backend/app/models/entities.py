@@ -3,9 +3,9 @@ from datetime import datetime, timezone
 from typing import Optional, List
 from sqlalchemy import (
     Column, String, Integer, Boolean, DateTime, ForeignKey, 
-    Text, Numeric, JSON, Enum, UniqueConstraint, Index
+    Text, Numeric, JSON, Enum, UniqueConstraint, Index, LargeBinary
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, deferred
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.core.database import Base
 
@@ -79,7 +79,7 @@ class LearningDemand(Base):
     language = Column(String(50), default="English")
     max_budget_cents = Column(Integer, default=5000)  # in integer minor units (e.g. $50.00 = 5000)
     currency = Column(String(10), default="USD")
-    preferred_schedule = Column(String(100), default="Weekend")
+    preferred_schedule = Column(String(100), default="Flexible")
     delivery_format = Column(String(50), default="live_interactive")
     confidence_score = Column(Numeric(4, 3), default=0.920)
     status = Column(String(50), default="pending", index=True)  # pending, clustered, offered
@@ -164,6 +164,31 @@ class Workshop(Base):
     reservations = relationship("Reservation", back_populates="workshop")
     holds = relationship("ReservationHold", back_populates="workshop")
     sessions = relationship("WorkshopSession", back_populates="workshop")
+
+    details = relationship("WorkshopDetails", uselist=False, lazy="selectin", cascade="all, delete-orphan")
+
+    @property
+    def image_url(self):
+        return f"/api/v1/workshops/{self.id}/image" if self.details and self.details.image_type else None
+
+    @property
+    def language(self):
+        return self.details.language if self.details else None
+
+    @property
+    def delivery_format(self):
+        return self.details.delivery_format if self.details else None
+
+
+class WorkshopDetails(Base):
+    __tablename__ = "workshop_details"
+
+    workshop_id = Column(String, ForeignKey("workshops.id", ondelete="CASCADE"), primary_key=True)
+    language = Column(String(50))
+    delivery_format = Column(String(40))
+    image_type = Column(String(20))
+    image_bytes = deferred(Column(LargeBinary))
+
 
 class WorkshopSession(Base):
     __tablename__ = "workshop_sessions"
@@ -378,3 +403,38 @@ class AuditLog(Base):
     details = Column(JSON, default=dict)
     ip_address = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+class WorkspaceSettings(Base):
+    __tablename__ = "workspace_settings"
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    data = Column(JSON, nullable=False, default=dict)
+
+
+class ReservationReschedule(Base):
+    __tablename__ = "reservation_reschedules"
+
+    reservation_id = Column(String, ForeignKey("reservations.id", ondelete="CASCADE"), primary_key=True)
+    requested_session_id = Column(String, ForeignKey("workshop_sessions.id", ondelete="SET NULL"), nullable=True)
+    approved_session_id = Column(String, ForeignKey("workshop_sessions.id", ondelete="SET NULL"), nullable=True)
+    status = Column(String(20), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+
+class WorkshopBookmark(Base):
+    __tablename__ = "workshop_bookmarks"
+
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    workshop_id = Column(String, ForeignKey("workshops.id", ondelete="CASCADE"), primary_key=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class AdvisorTurn(Base):
+    __tablename__ = "advisor_turns"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    sources = Column(JSON, nullable=False)
+    mode = Column(String(20), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)

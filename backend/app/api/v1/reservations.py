@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 from app.core.database import get_db
-from app.models.entities import User, Workshop, Reservation, ReservationHold, AuditLog
+from app.models.entities import User, Workshop, Reservation, ReservationHold, AuditLog, WorkshopSession, MerchantProfile, Notification, ReservationReschedule
 from app.schemas.reservation import (
     ReservationQuoteRequest, ReservationQuoteResponse,
-    ReservationCreate, ReservationResponse
+    ReservationCreate, ReservationResponse, RescheduleRequest, ReservedWorkshop
 )
 from app.rewards.engine import reward_engine
 from app.api.deps import get_current_user
@@ -52,6 +52,8 @@ async def create_reservation(
     if not workshop:
         raise HTTPException(status_code=404, detail="Workshop not found.")
         
+    if not workshop.is_published:
+        raise HTTPException(400, "Workshop is not published.")
     if workshop.remaining_seats <= 0:
         raise HTTPException(status_code=400, detail="Workshop is fully booked. No seats remaining.")
         
@@ -73,6 +75,8 @@ async def create_reservation(
             campaign_ids=req.campaign_ids,
             use_store_credit=req.use_store_credit
         )
+        if existing.final_amount_cents != quote["final_amount_cents"] or existing.currency != quote["currency"]:
+            existing.paypal_order_id = None
         existing.final_amount_cents = quote["final_amount_cents"]
         existing.currency = quote["currency"]
         db.add(AuditLog(
@@ -177,18 +181,33 @@ async def list_my_reservations(
 ):
     stmt = (
         select(Reservation)
-        .options(selectinload(Reservation.workshop))
+        .options(selectinload(Reservation.workshop), selectinload(Reservation.attendance))
         .where(Reservation.user_id == user.id)
         .order_by(desc(Reservation.created_at))
     )
     result = await db.execute(stmt)
     reservations = result.scalars().all()
-    
-    return [
-        ReservationResponse(
+    schedules = {
+        change.reservation_id: (change, session)
+        for change, session in await db.execute(
+            select(ReservationReschedule, WorkshopSession)
+            .outerjoin(WorkshopSession, WorkshopSession.id == ReservationReschedule.approved_session_id)
+            .where(ReservationReschedule.reservation_id.in_([item.id for item in reservations]))
+        )
+    } if reservations else {}
+    responses = []
+    for r in reservations:
+        change, session = schedules.get(r.id, (None, None))
+        workshop = ReservedWorkshop.model_validate(r.workshop) if r.workshop else None
+        if workshop and session:
+            workshop.scheduled_at = ReservedWorkshop.normalize_schedule(session.session_date)
+        responses.append(ReservationResponse(
             id=r.id,
             workshop_id=r.workshop_id,
             workshop_title=r.workshop.title if r.workshop else "NUVENDRY Workshop",
+            workshop=workshop,
+            reschedule_status=change.status if change else None,
+            attended=r.attendance.attended if r.attendance else None,
             user_id=r.user_id,
             final_amount_cents=r.final_amount_cents,
             currency=r.currency,
@@ -196,10 +215,9 @@ async def list_my_reservations(
             paypal_order_id=r.paypal_order_id,
             paypal_capture_id=r.paypal_capture_id,
             created_at=r.created_at,
-            confirmed_at=r.confirmed_at
-        )
-        for r in reservations
-    ]
+            confirmed_at=r.confirmed_at,
+        ))
+    return responses
 
 @router.post("/{reservation_id}/cancel", response_model=ReservationResponse)
 async def cancel_pending_reservation(
@@ -211,6 +229,7 @@ async def cancel_pending_reservation(
         select(Reservation)
         .options(selectinload(Reservation.workshop))
         .where(Reservation.id == reservation_id, Reservation.user_id == user.id)
+        .with_for_update()
     )
     reservation = (await db.execute(stmt)).scalar_one_or_none()
     if not reservation:
@@ -252,3 +271,78 @@ async def cancel_pending_reservation(
     )
 
 
+
+@router.get("/{reservation_id}/reschedule-options")
+async def reschedule_options(
+    reservation_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    reservation = await get_reschedulable_reservation(reservation_id, user.id, db)
+    change = await db.get(ReservationReschedule, reservation.id)
+    if change and change.status == "requested":
+        raise HTTPException(409, "A reschedule request is already pending.")
+    sessions = await db.scalars(available_reschedule_sessions(reservation.workshop))
+    return [
+        {"id": session.id, "scheduled_at": session.session_date.replace(tzinfo=timezone.utc) if session.session_date.tzinfo is None else session.session_date}
+        for session in sessions if not change or session.id != change.approved_session_id
+    ]
+
+
+@router.post("/{reservation_id}/reschedule-requests", status_code=201)
+async def request_reschedule(
+    reservation_id: str,
+    payload: RescheduleRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    reservation = await get_reschedulable_reservation(reservation_id, user.id, db, lock=True)
+    session = await db.scalar(available_reschedule_sessions(reservation.workshop).where(
+        WorkshopSession.id == payload.session_id
+    ))
+    if not session:
+        raise HTTPException(409, "This alternate session is no longer available.")
+    change = await db.get(ReservationReschedule, reservation.id)
+    if change and change.status == "requested":
+        raise HTTPException(409, "A reschedule request is already pending.")
+    if change and change.approved_session_id == session.id:
+        raise HTTPException(409, "You are already booked for this session.")
+    if not change:
+        change = ReservationReschedule(reservation_id=reservation.id)
+        db.add(change)
+    change.requested_session_id = session.id
+    change.status = "requested"
+    merchant = await db.get(MerchantProfile, reservation.workshop.merchant_id)
+    db.add(Notification(
+        user_id=merchant.user_id,
+        title="Reservation reschedule request",
+        message=f"{user.full_name} requested to move {reservation.workshop.title} to {session.session_date.isoformat()}.",
+        link="/merchant/reservations?workspace=account",
+    ))
+    db.add(AuditLog(
+        user_id=user.id, action="RESCHEDULE_REQUESTED", resource_type="Reservation",
+        resource_id=reservation.id, details={"session_id": session.id},
+    ))
+    await db.commit()
+    return {"status": "requested"}
+
+
+async def get_reschedulable_reservation(reservation_id, user_id, db, *, lock=False):
+    query = select(Reservation).options(selectinload(Reservation.workshop)).where(
+        Reservation.id == reservation_id, Reservation.user_id == user_id
+    )
+    reservation = await db.scalar(query.with_for_update() if lock else query)
+    if not reservation:
+        raise HTTPException(404, "Reservation not found.")
+    if reservation.status != "confirmed":
+        raise HTTPException(409, "Only confirmed reservations can be rescheduled.")
+    return reservation
+
+
+def available_reschedule_sessions(workshop):
+    return select(WorkshopSession).where(
+        WorkshopSession.workshop_id == workshop.id,
+        WorkshopSession.status == "scheduled",
+        WorkshopSession.session_date > datetime.now(timezone.utc),
+        WorkshopSession.session_date != workshop.scheduled_at,
+    ).order_by(WorkshopSession.session_date)

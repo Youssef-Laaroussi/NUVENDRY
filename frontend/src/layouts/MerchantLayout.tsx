@@ -1,10 +1,12 @@
+import './InstructorStudio.css';
+import './InstructorSidebar.css';
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, Layers, Sparkles, BookOpen, Users, 
-  Tag, CreditCard, BarChart3, FlaskConical, Settings, 
-  LogOut, Menu, X, ShieldCheck, ArrowRight, Plus
+  Gift, CreditCard, BarChart3, FlaskConical, Settings, 
+  LogOut, Menu, X, ShieldCheck, ArrowRight, Bell, ChevronDown
 } from 'lucide-react';
 
 const MERCHANT_NAV = [
@@ -13,7 +15,7 @@ const MERCHANT_NAV = [
   { name: 'Offer Studio', path: '/merchant/offer-studio', icon: Sparkles },
   { name: 'Workshops', path: '/merchant/workshops', icon: BookOpen },
   { name: 'Reservations & Attendance', path: '/merchant/reservations', icon: Users },
-  { name: 'Reward Studio', path: '/merchant/reward-studio', icon: Tag },
+  { name: 'Reward Studio', path: '/merchant/reward-studio', icon: Gift },
   { name: 'PayPal Transactions', path: '/merchant/payments', icon: CreditCard },
   { name: 'Analytics', path: '/merchant/analytics', icon: BarChart3 },
   { name: 'Academic Research Lab', path: '/merchant/research-lab', icon: FlaskConical },
@@ -39,11 +41,6 @@ export const MerchantLayout: React.FC = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [mobileMenuOpen]);
 
-  const getPageTitle = () => {
-    const active = MERCHANT_NAV.find((item) => item.path === location.pathname);
-    return active ? active.name : 'Instructor Studio';
-  };
-
   return (
     <div className="min-h-screen bg-ivory flex flex-col text-charcoal">
       {/* Dedicated Workspace Topbar */}
@@ -59,76 +56,28 @@ export const MerchantLayout: React.FC = () => {
           </button>
 
           <Link to="/" className="flex items-center space-x-2 group">
-            <div className="w-8 h-8 rounded-lg bg-forest flex items-center justify-center text-ivory font-bold text-base">
-              N
-            </div>
-            <span className="font-semibold text-base tracking-tight text-charcoal hidden sm:inline">
-              NUVENDRY
-            </span>
+            <img src="/nuvendry-mark.png" alt="" className="w-8 h-8 shrink-0 rounded-md object-contain" />
+            <span className="studio-wordmark">NUVENDRY<sup>™</sup></span>
           </Link>
-
-          <span className="text-charcoal/30 text-sm hidden sm:inline">/</span>
-
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-md bg-forest text-ivory text-[11px] font-mono font-semibold uppercase tracking-wider">
-              Instructor Studio
-            </span>
-            <span className="text-sm font-semibold text-charcoal hidden md:inline">
-              {getPageTitle()}
-            </span>
-          </div>
+          <span className="studio-label">Instructor Studio</span>
         </div>
 
         {/* Right: PayPal Status & Actions */}
         <div className="flex items-center space-x-3 sm:space-x-4">
-          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-mint text-forest font-mono text-xs font-semibold">
-            <ShieldCheck className="w-3.5 h-3.5 text-forest" />
-            <span>PayPal Sandbox Orders v2</span>
-          </div>
-
-          <Link
-            to="/merchant/offer-studio"
-            className="nv-btn-press inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-forest text-ivory text-xs font-semibold hover:bg-charcoal transition-colors shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-gold" />
-            <span className="hidden sm:inline">AI Offer Studio</span>
-          </Link>
-
-          <div className="h-5 w-px bg-warmgray hidden sm:block" />
-
-          {/* User Profile */}
-          <div className="flex items-center space-x-2.5">
-            <div className="w-7 h-7 rounded-full bg-charcoal text-ivory flex items-center justify-center text-xs font-bold font-mono">
-              {user?.full_name?.charAt(0) || 'I'}
-            </div>
-            <div className="hidden sm:block text-left">
-              <div className="text-xs font-semibold text-charcoal leading-none">
-                {user?.full_name?.split(' ')[0]}
-              </div>
-              <div className="text-[10px] text-forest font-mono mt-0.5">
-                Instructor
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              logout();
-              navigate('/');
-            }}
-            className="nv-btn-press p-1.5 rounded-lg text-charcoal/60 hover:text-charcoal hover:bg-warmgray/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
-            title="Sign Out"
-            aria-label="Sign Out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          <Link to="/merchant/offer-studio" aria-label="AI Offer Studio" className="studio-pill studio-primary"><Sparkles size={16}/><span>AI Offer Studio</span></Link>
+          <Link to="/merchant/overview#activity" className="studio-bell" aria-label="Recent instructor activity" onClick={() => document.getElementById('activity')?.scrollIntoView()}><Bell size={19}/></Link>
+          <details key={location.pathname} className="studio-profile">
+            <summary><i/><span>{user?.full_name || 'Dr. Elena Park'}</span><ChevronDown size={14}/></summary>
+            <div><Link to="/merchant/settings">Settings</Link><Link to="/app/overview">Switch to Learner View</Link><button onClick={() => { logout(); navigate('/'); }}><LogOut size={14}/>Sign Out</button></div>
+          </details>
         </div>
       </header>
 
       {/* Main Workspace: Sidebar + Outlet */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row gap-6 items-start">
+      <div className="flex-1 studio-frame w-full mx-auto flex flex-col md:flex-row gap-4 items-start">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:flex flex-col w-64 shrink-0 bg-white rounded-2xl border border-warmgray p-3.5 space-y-1 shadow-2xs sticky top-22">
+        <aside className="studio-sidebar hidden md:flex flex-col shrink-0">
+          <nav className="studio-menu">
           <div className="px-3 py-2 text-[11px] font-mono font-semibold text-charcoal/40 uppercase tracking-wider">
             Operational Menu
           </div>
@@ -153,15 +102,12 @@ export const MerchantLayout: React.FC = () => {
             );
           })}
 
-          <div className="pt-4 mt-2 border-t border-warmgray/60 px-3">
-            <Link
-              to="/app/overview"
-              className="flex items-center justify-between text-xs font-medium text-charcoal/60 hover:text-forest transition-colors group"
-            >
-              <span>Switch to Learner View</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </div>
+          </nav>
+          <section className="studio-support">
+            <h2>Instructor Support<br/>&amp; Growth.</h2>
+            <p>{location.pathname === '/merchant/settings' ? 'Get setup help, integration guides, and best practices to scale your academy with NUVENDRY.' : location.pathname === '/merchant/research-lab' ? 'Design rigorous experiments, benchmark learning systems, and advance research in real-world workshop settings with NUVENDRY.' : location.pathname === '/merchant/reward-studio' ? 'Create reward campaigns, recognize learner achievements, and build lasting engagement with NUVENDRY.' : 'Create standout workshops, validate demand, manage bookings and rewards, and scale your learning impact with NUVENDRY.'}</p>
+            <Link className="studio-pill studio-primary" to="/merchant/research-lab">{location.pathname === '/merchant/research-lab' ? 'Get Research Resources' : 'Get Instructor Resources'} <ArrowRight size={14}/></Link>
+          </section>
         </aside>
 
         {/* Mobile Navigation Drawer */}

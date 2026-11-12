@@ -1,0 +1,10 @@
+@media (min-width: 1280px) {
+  [data-matches-referrals] main h1 { font-size: 32px; }
+  [data-matches-referrals] main h2 { font-size: 18px; }
+  .matches-summary > div {
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+  }
+}

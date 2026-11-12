@@ -1,5 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional, Tuple
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from app.models.entities import (
@@ -45,7 +46,7 @@ class RewardEngine:
         
         for campaign in campaigns:
             # Check expiration
-            if campaign.expires_at and campaign.expires_at < now:
+            if campaign.expires_at and (campaign.expires_at if campaign.expires_at.tzinfo else campaign.expires_at.replace(tzinfo=timezone.utc)) < now:
                 continue
                 
             # Check min spend
@@ -86,7 +87,10 @@ class RewardEngine:
             # Reward 2: Early-Bird Discount
             elif campaign.campaign_type == "early_bird":
                 # Check if now is at least 3 days before workshop.scheduled_at
-                if workshop.scheduled_at - now >= timedelta(days=3):
+                scheduled_at = workshop.scheduled_at
+                if scheduled_at.tzinfo is None:
+                    scheduled_at = scheduled_at.replace(tzinfo=timezone.utc)
+                if scheduled_at - now >= timedelta(days=3):
                     if campaign.discount_amount_cents > 0:
                         discount = campaign.discount_amount_cents
                     elif campaign.discount_percentage > 0:
@@ -115,7 +119,7 @@ class RewardEngine:
             sc_stmt = select(StoreCredit).where(StoreCredit.user_id == user.id)
             sc_res = await db.execute(sc_stmt)
             store_credit = sc_res.scalar_one_or_none()
-            if store_credit and store_credit.balance_cents > 0:
+            if store_credit and store_credit.currency == workshop.currency and store_credit.balance_cents > 0:
                 available_sc = store_credit.balance_cents
                 max_sc_discount = max(0, current_amount_cents - 500)
                 store_credit_applied_cents = min(available_sc, max_sc_discount)
@@ -126,10 +130,32 @@ class RewardEngine:
             "base_price_cents": base_price_cents,
             "rewards_applied": rewards_applied,
             "store_credit_applied_cents": store_credit_applied_cents,
-            "final_amount_cents": max(500, current_amount_cents),
+            "final_amount_cents": current_amount_cents,
             "currency": workshop.currency,
             "seat_available": workshop.remaining_seats > 0
         }
+
+    async def validate_checkout_funding(self, db: AsyncSession, reservation: Reservation, quote: Dict[str, Any]):
+        for reward in quote.get("rewards_applied", []):
+            campaign = await db.scalar(select(RewardCampaign).where(
+                RewardCampaign.id == reward["campaign_id"],
+            ).with_for_update().execution_options(populate_existing=True))
+            if not campaign or not campaign.is_active or campaign.remaining_budget_cents < reward["discount_cents"]:
+                raise HTTPException(409, "The promotion has changed. Refresh the checkout quote before paying.")
+            redemptions = await db.scalar(select(func.count(RewardRedemption.id)).where(
+                RewardRedemption.campaign_id == campaign.id,
+                RewardRedemption.user_id == reservation.user_id,
+            ))
+            if redemptions >= campaign.max_per_user:
+                raise HTTPException(409, "This promotion has already been used. Refresh the checkout quote before paying.")
+
+        credit_used = quote.get("store_credit_applied_cents", 0)
+        if credit_used:
+            credit = await db.scalar(select(StoreCredit).where(
+                StoreCredit.user_id == reservation.user_id,
+            ).with_for_update().execution_options(populate_existing=True))
+            if not credit or credit.currency != reservation.currency or credit.balance_cents < credit_used:
+                raise HTTPException(409, "Your store credit balance has changed. Refresh the checkout quote before paying.")
 
     async def consume_rewards_on_payment_success(
         self,

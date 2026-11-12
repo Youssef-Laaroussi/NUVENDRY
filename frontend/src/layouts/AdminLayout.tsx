@@ -53,9 +53,7 @@ export const AdminLayout: React.FC = () => {
           </button>
 
           <Link to="/" className="flex items-center space-x-2 group">
-            <div className="w-8 h-8 rounded-lg bg-forest flex items-center justify-center text-ivory font-bold text-base">
-              N
-            </div>
+            <img src="/nuvendry-mark.png" alt="" className="w-8 h-8 shrink-0 rounded-md object-contain" />
             <span className="font-semibold text-base tracking-tight text-charcoal hidden sm:inline">
               NUVENDRY
             </span>

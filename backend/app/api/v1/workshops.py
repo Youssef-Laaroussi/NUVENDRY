@@ -1,14 +1,26 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, delete
 from sqlalchemy.orm import selectinload
 from app.core.database import get_db
-from app.models.entities import Workshop, MerchantProfile, Reservation, DigitalGift, User
+from app.models.entities import Workshop, MerchantProfile, Reservation, DigitalGift, User, WorkshopBookmark, WorkshopDetails
 from app.schemas.workshop import WorkshopResponse
 from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/workshops", tags=["Public Workshops Marketplace"])
+
+@router.get("/{workshop_id}/image")
+async def workshop_image(workshop_id: str, db: AsyncSession = Depends(get_db)):
+    row = (await db.execute(
+        select(WorkshopDetails.image_type, WorkshopDetails.image_bytes)
+        .join(Workshop, Workshop.id == WorkshopDetails.workshop_id)
+        .where(Workshop.id == workshop_id, Workshop.is_published.is_(True))
+    )).one_or_none()
+    if not row or not row.image_type:
+        raise HTTPException(404, "Workshop image not found.")
+    return Response(row.image_bytes, media_type=row.image_type, headers={"X-Content-Type-Options": "nosniff"})
+
 
 @router.get("", response_model=List[WorkshopResponse])
 async def list_workshops(
@@ -19,7 +31,7 @@ async def list_workshops(
 ):
     stmt = (
         select(Workshop)
-        .options(selectinload(Workshop.merchant))
+        .options(selectinload(Workshop.merchant).selectinload(MerchantProfile.user))
         .where(Workshop.is_published == True)
         .order_by(desc(Workshop.scheduled_at))
     )
@@ -41,6 +53,9 @@ async def list_workshops(
         merchant_name = w.merchant.business_name if w.merchant else "Verified Instructor"
         resp = WorkshopResponse(
             id=w.id,
+            image_url=w.image_url,
+            language=w.language,
+            delivery_format=w.delivery_format,
             merchant_id=w.merchant_id,
             offer_id=w.offer_id,
             title=w.title,
@@ -55,18 +70,51 @@ async def list_workshops(
             scheduled_at=w.scheduled_at,
             is_published=w.is_published,
             created_at=w.created_at,
+            instructor_name=w.merchant.user.full_name if w.merchant and w.merchant.user else None,
             merchant_name=merchant_name
         )
         responses.append(resp)
         
     return responses
 
+@router.get("/bookmarks")
+async def list_bookmarks(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    workshops = await db.scalars(
+        select(Workshop).join(WorkshopBookmark, WorkshopBookmark.workshop_id == Workshop.id)
+        .where(WorkshopBookmark.user_id == user.id, Workshop.is_published.is_(True))
+        .order_by(WorkshopBookmark.created_at.desc())
+    )
+    return [
+        {"id": workshop.id, "title": workshop.title, "category": workshop.category, "duration_hours": workshop.duration_hours}
+        for workshop in workshops
+    ]
+
+
+@router.put("/{workshop_id}/bookmark", status_code=204)
+async def save_bookmark(workshop_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    await db.execute(select(User.id).where(User.id == user.id).with_for_update())
+    if not await db.scalar(select(Workshop.id).where(Workshop.id == workshop_id, Workshop.is_published.is_(True))):
+        raise HTTPException(404, "Published workshop not found.")
+    if not await db.get(WorkshopBookmark, (user.id, workshop_id)):
+        db.add(WorkshopBookmark(user_id=user.id, workshop_id=workshop_id))
+    await db.commit()
+
+
+@router.delete("/{workshop_id}/bookmark", status_code=204)
+async def remove_bookmark(workshop_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    await db.execute(select(User.id).where(User.id == user.id).with_for_update())
+    await db.execute(delete(WorkshopBookmark).where(
+        WorkshopBookmark.user_id == user.id, WorkshopBookmark.workshop_id == workshop_id,
+    ))
+    await db.commit()
+
+
 @router.get("/{workshop_id}", response_model=WorkshopResponse)
 async def get_workshop(workshop_id: str, db: AsyncSession = Depends(get_db)):
     stmt = (
         select(Workshop)
-        .options(selectinload(Workshop.merchant))
-        .where(Workshop.id == workshop_id)
+        .options(selectinload(Workshop.merchant).selectinload(MerchantProfile.user))
+        .where(Workshop.id == workshop_id, Workshop.is_published == True)
     )
     result = await db.execute(stmt)
     w = result.scalar_one_or_none()
@@ -76,6 +124,9 @@ async def get_workshop(workshop_id: str, db: AsyncSession = Depends(get_db)):
     merchant_name = w.merchant.business_name if w.merchant else "Verified Instructor"
     return WorkshopResponse(
         id=w.id,
+        image_url=w.image_url,
+        language=w.language,
+        delivery_format=w.delivery_format,
         merchant_id=w.merchant_id,
         offer_id=w.offer_id,
         title=w.title,
@@ -90,6 +141,7 @@ async def get_workshop(workshop_id: str, db: AsyncSession = Depends(get_db)):
         scheduled_at=w.scheduled_at,
         is_published=w.is_published,
         created_at=w.created_at,
+        instructor_name=w.merchant.user.full_name if w.merchant and w.merchant.user else None,
         merchant_name=merchant_name
     )
 

@@ -1,0 +1,32 @@
+.landing-event-card:hover,
+.landing-event-card:focus-visible,
+.landing-featured-card:hover > *,
+.landing-featured-card:focus-within > * {
+  border-color: #75a98a;
+  box-shadow: 0 16px 32px #143b2e24;
+}
+
+.landing-event-card:hover,
+.landing-event-card:focus-visible {
+  background-color: #f8fff9;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing-event-card {
+    transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+  }
+
+  .landing-event-card:hover,
+  .landing-event-card:focus-visible {
+    transform: translateY(-8px);
+  }
+
+  .landing-event-card .landing-event-arrow {
+    transition: transform 200ms ease;
+  }
+
+  .landing-event-card:hover .landing-event-arrow,
+  .landing-event-card:focus-visible .landing-event-arrow {
+    transform: translateX(6px);
+  }
+}

@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 from datetime import datetime, timezone, timedelta
+from sqlalchemy import select
 from app.core.database import AsyncSessionLocal, engine, Base
 from app.core.security import get_password_hash
 from app.models.entities import (
@@ -13,10 +14,12 @@ from app.ai.evaluator import evaluator
 async def seed():
     print("🌱 Initializing Database Schema...")
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
         
     async with AsyncSessionLocal() as db:
+        if await db.scalar(select(User.id).limit(1)) is not None:
+            print("Database already initialized. Skipping demo seed.")
+            return
         now = datetime.now(timezone.utc)
         
         # 1. Admin User
@@ -182,7 +185,7 @@ async def seed():
             ],
             suggested_duration_hours=2,
             suggested_level="intermediate",
-            suggested_price_cents=3900,  # $39.00
+            suggested_price_cents=1200,  # $12.00
             currency="USD",
             evidence_summary="Demand derived from 2 validated learner requests with $42.50 average target budget.",
             constraints_summary="English language delivery, interactive code repository provided.",
@@ -201,7 +204,7 @@ async def seed():
             category="LangGraph Agents",
             difficulty="Intermediate",
             duration_hours=2,
-            price_cents=3900,
+            price_cents=1200,
             currency="USD",
             total_seats=25,
             remaining_seats=23,
@@ -219,7 +222,7 @@ async def seed():
             category="MLOps",
             difficulty="Advanced",
             duration_hours=3,
-            price_cents=5500,
+            price_cents=1500,
             currency="USD",
             total_seats=20,
             remaining_seats=18,
@@ -237,7 +240,7 @@ async def seed():
             category="React + FastAPI",
             difficulty="Beginner-Intermediate",
             duration_hours=2,
-            price_cents=2900,
+            price_cents=1000,
             currency="USD",
             total_seats=30,
             remaining_seats=29,
@@ -250,10 +253,10 @@ async def seed():
         camp1 = RewardCampaign(
             id=str(uuid.uuid4()),
             merchant_id=merchant_profile_id,
-            name="First-Timer Welcome Discount ($10 Off)",
+            name="First-Timer Welcome Discount ($2 Off)",
             campaign_type="welcome",
-            discount_amount_cents=1000,
-            min_spend_cents=2500,
+            discount_amount_cents=200,
+            min_spend_cents=1200,
             total_budget_cents=50000,
             remaining_budget_cents=48000,
             max_per_user=1,
@@ -263,10 +266,10 @@ async def seed():
         camp2 = RewardCampaign(
             id=str(uuid.uuid4()),
             merchant_id=merchant_profile_id,
-            name="Early Bird Booking ($15 Off 3+ Days in Advance)",
+            name="Early Bird Booking ($2 Off 3+ Days in Advance)",
             campaign_type="early_bird",
-            discount_amount_cents=1500,
-            min_spend_cents=3000,
+            discount_amount_cents=200,
+            min_spend_cents=1200,
             total_budget_cents=75000,
             remaining_budget_cents=72000,
             max_per_user=1,

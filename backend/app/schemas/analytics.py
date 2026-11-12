@@ -22,11 +22,12 @@ class PaymentTransactionItem(BaseModel):
     paypal_order_id: Optional[str]
     paypal_capture_id: Optional[str]
     buyer_name: str
+    workshop_id: str
     workshop_title: str
     amount_cents: int
     currency: str
     status: str
-    created_at: datetime
+    created_at: Optional[datetime]
 
 class ResearchEvaluationRequest(BaseModel):
     baseline: str = "all"  # "baseline_a", "baseline_b", "proposed", or "all"

@@ -1,5 +1,7 @@
 import os
+import secrets
 from typing import List
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -8,7 +10,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # Security
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "nuvendry_production_grade_secret_key_change_in_prod_2026")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", secrets.token_urlsafe(48))
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     
@@ -41,6 +43,14 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5176"
     ]
     
+    # Optional local model; empty uses the evidence-grounded TF-IDF planner.
+    OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
+    OLLAMA_MODEL: str = ""
+    DEEPSEEK_API_KEY: SecretStr = SecretStr("")
+    DEEPSEEK_MODEL: str = "deepseek-flash"
+
+    REFERRAL_REWARD_CENTS: int = 1000
+
     # Demo Mode
     DEMO_MODE: bool = os.getenv("DEMO_MODE", "true").lower() in ("true", "1", "yes")
 

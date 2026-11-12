@@ -8,9 +8,9 @@ services:
       POSTGRES_PASSWORD: nuvendry_secret_password_2026
       POSTGRES_DB: nuvendry
     ports:
-      - "5432:5432"
+      - "127.0.0.1:55432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_demo_v2_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nuvendry -d nuvendry"]
       interval: 5s
@@ -22,6 +22,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: nuvendry-backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     depends_on:
       postgres:
@@ -33,6 +35,10 @@ services:
       - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID:-}
       - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET:-}
       - PAYPAL_WEBHOOK_ID=${PAYPAL_WEBHOOK_ID:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-flash}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       - DEMO_MODE=true
     command: >
       sh -c "python seed_demo.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
@@ -43,13 +49,23 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: development
     container_name: nuvendry-frontend
     restart: unless-stopped
     depends_on:
       - backend
     ports:
-      - "5173:80"
+      - "5173:5173"
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
+    volumes:
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+      - ./frontend/index.html:/app/index.html:ro
+      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js:ro
+      - ./frontend/postcss.config.js:/app/postcss.config.js:ro
 
 volumes:
-  postgres_data:
+  postgres_demo_v2_data:
 

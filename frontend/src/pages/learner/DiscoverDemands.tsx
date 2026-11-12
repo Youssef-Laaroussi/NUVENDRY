@@ -1,3 +1,6 @@
+import { ReserveLink } from '../../components/ReservationPopup';
+import { useWorkshopBookmarks } from './savedWorkshops';
+import { useAuth } from '../../context/AuthContext';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { api, useSyncRefresh } from '../../api/client';
 import { Workshop } from '../../types';
@@ -13,22 +16,17 @@ import {
 // High-fidelity assets
 import heroMountainsAi from '../../assets/discover-hero-mountains-v2.jpg';
 import milestoneMountainsAi from '../../assets/milestone-mountains-ai.jpg';
-import featuredMlopsDesk from '../../assets/featured-desk-clean.jpg';
+import defaultWorkshopImage from '../../assets/featured-desk-clean.jpg';
 import featuredMountainRight from '../../assets/featured-banner-mountains.jpg';
-import wsThumb1 from '../../assets/discover-ws-1.jpg';
-import wsThumb2 from '../../assets/discover-ws-2.jpg';
-import wsThumb3 from '../../assets/discover-ws-3.jpg';
-import wsThumb4 from '../../assets/discover-ws-4.jpg';
-import avatarOmar from '../../assets/avatar-omar.jpg';
-import avatarSara from '../../assets/avatar-sara.jpg';
-import avatarKarim from '../../assets/avatar-karim.jpg';
-import avatarNadia from '../../assets/avatar-nadia.jpg';
-import avatarLeila from '../../assets/avatar-leila.jpg';
 
 interface DisplayWorkshop {
   id: string;
   title: string;
   tag: string;
+  format?: string;
+  level?: string;
+  createdAt?: string;
+  priceAmount?: number;
   rating: number;
   reviewsCount: number;
   description: string;
@@ -36,78 +34,9 @@ interface DisplayWorkshop {
   duration: string;
   seats: string;
   instructorName: string;
-  instructorRole: string;
-  instructorAvatar: string;
   price: string;
-  image: string;
+  image?: string | null;
 }
-
-const DEFAULT_WORKSHOPS: DisplayWorkshop[] = [
-  {
-    id: 'ws-langgraph',
-    title: 'Building AI Agents with LangGraph',
-    tag: 'AI & Data',
-    rating: 4.9,
-    reviewsCount: 428,
-    description: 'Design, build, and deploy multi-step AI agents using LangGraph, tools, and real-world patterns.',
-    date: 'Nov 26, 2026',
-    duration: '~ 4 hours',
-    seats: '18 / 25',
-    instructorName: 'Omar Benali',
-    instructorRole: 'AI Solutions Architect',
-    instructorAvatar: avatarOmar,
-    price: '$49.00',
-    image: wsThumb1,
-  },
-  {
-    id: 'ws-fullstack',
-    title: 'Full-Stack AI Apps with Next.js & FastAPI',
-    tag: 'Development',
-    rating: 4.8,
-    reviewsCount: 312,
-    description: 'Build end-to-end AI-powered applications with Next.js, FastAPI, and modern best practices.',
-    date: 'Nov 15, 2026',
-    duration: '~ 6 hours',
-    seats: '21 / 30',
-    instructorName: 'Sara El Mansouri',
-    instructorRole: 'Full-Stack Engineer & Instructor',
-    instructorAvatar: avatarSara,
-    price: '$29.00',
-    image: wsThumb2,
-  },
-  {
-    id: 'ws-product',
-    title: 'Product Discovery & AI-Powered Design',
-    tag: 'Product & Design',
-    rating: 4.8,
-    reviewsCount: 189,
-    description: 'Validate ideas, shape product opportunities, and design faster with AI-assisted workflows.',
-    date: 'Dec 02, 2026',
-    duration: '~ 5 hours',
-    seats: '12 / 20',
-    instructorName: 'Karim Haddad',
-    instructorRole: 'Product Designer & Coach',
-    instructorAvatar: avatarKarim,
-    price: '$39.00',
-    image: wsThumb3,
-  },
-  {
-    id: 'ws-k8s',
-    title: 'Kubernetes in Production',
-    tag: 'Cloud & DevOps',
-    rating: 4.7,
-    reviewsCount: 266,
-    description: 'Deploy, scale, and manage real applications on Kubernetes with hands-on, production-grade practices.',
-    date: 'Dec 09, 2026',
-    duration: '~ 7 hours',
-    seats: '10 / 18',
-    instructorName: 'Nadia Cherif',
-    instructorRole: 'DevOps Engineer & Cloud Instructor',
-    instructorAvatar: avatarNadia,
-    price: '$59.00',
-    image: wsThumb4,
-  },
-];
 
 const CATEGORIES = [
   { id: 'all', name: 'All Categories', icon: LayoutGrid },
@@ -126,7 +55,15 @@ export const DiscoverDemands: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'available' | 'top_rated' | 'new'>('all');
   const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [bookmarked, setBookmarked] = useState<Record<string, boolean>>({});
+  const { user } = useAuth();
+  const { saved, busy: savingBookmark, error: bookmarkError, toggle: toggleBookmark } = useWorkshopBookmarks(user?.id);
+  const bookmarked = Object.fromEntries(saved.map(item => [item.id, true]));
+  const workshopLink = (id: string) => serverWorkshops.some(w => w.id === id) ? '/workshops/' + id : '/workshops';
+  const [format, setFormat] = useState('');
+  const [level, setLevel] = useState('');
+  const [month, setMonth] = useState('');
+  const [price, setPrice] = useState('');
+  const [onlySaved, setOnlySaved] = useState(false);
   const [sortBy, setSortBy] = useState('Most Relevant');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -147,34 +84,49 @@ export const DiscoverDemands: React.FC = () => {
 
   useSyncRefresh(['workshops', 'reservations'], load);
 
-  const toggleBookmark = (id: string) => {
-    setBookmarked((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+  const workshopsList = useMemo<DisplayWorkshop[]>(() => serverWorkshops.length
+    ? serverWorkshops.map(w => ({
+      id: w.id, title: w.title, description: w.description, tag: w.category, level: w.difficulty,
+      rating: 0, reviewsCount: 0, createdAt: w.created_at,
+      date: new Date(w.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      duration: `${w.duration_hours} hours`, seats: `${w.total_seats - w.remaining_seats} / ${w.total_seats}`,
+      instructorName: w.instructor_name || 'Workshop instructor',
+      price: new Intl.NumberFormat('en-US', { style: 'currency', currency: w.currency }).format(w.price_cents / 100),
+      priceAmount: w.price_cents / 100, image: w.image_url?.trim() || defaultWorkshopImage,
+    }))
+    : [], [serverWorkshops]);
 
-  // Combine server workshops with high-fidelity defaults (exact 4 reference workshops)
-  const workshopsList = useMemo(() => {
-    return DEFAULT_WORKSHOPS;
-  }, []);
+  const upcomingWorkshops = serverWorkshops
+    .filter(workshop => workshop.remaining_seats > 0 && Date.parse(workshop.scheduled_at) > Date.now())
+    .sort((a, b) => Date.parse(a.scheduled_at) - Date.parse(b.scheduled_at));
+  const featured = workshopsList.find(workshop => workshop.id === upcomingWorkshops[0]?.id);
 
-  const filteredWorkshops = useMemo(() => {
-    return workshopsList.filter((item) => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const match = item.title.toLowerCase().includes(q) || item.instructorName.toLowerCase().includes(q) || item.tag.toLowerCase().includes(q);
-        if (!match) return false;
-      }
-      if (activeCategory !== 'all') {
-        if (activeCategory === 'ai-data' && item.tag !== 'AI & Data') return false;
-        if (activeCategory === 'development' && item.tag !== 'Development') return false;
-        if (activeCategory === 'product-design' && item.tag !== 'Product & Design') return false;
-        if (activeCategory === 'cloud-devops' && item.tag !== 'Cloud & DevOps') return false;
-      }
-      return true;
-    });
-  }, [workshopsList, searchQuery, activeCategory]);
+  const monthOf = (date: string) => new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+  const priceOf = (item: DisplayWorkshop) => item.priceAmount ?? Number(item.price.slice(1));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const filteredWorkshops = workshopsList.filter(item => {
+    const query = searchQuery.trim().toLowerCase();
+    const [taken, capacity] = item.seats.split('/').map(Number);
+    const category = CATEGORIES.find(c => c.id === activeCategory)?.name ?? activeCategory;
+    return [item.title, item.description, item.instructorName, item.tag].join(' ').toLowerCase().includes(query)
+      && (activeCategory === 'all' || category.toLowerCase() === item.tag.toLowerCase())
+      && (!format || item.format === format) && (!level || item.level === level)
+      && (!month || monthOf(item.date) === month)
+      && (!price || (price === 'Under 50' ? priceOf(item) < 50 : priceOf(item) >= 50))
+      && (!onlySaved || bookmarked[item.id])
+      && (activeFilter !== 'upcoming' || Date.parse(item.date) >= today.getTime())
+      && (activeFilter !== 'available' || taken < capacity)
+      && (activeFilter !== 'top_rated' || item.rating >= 4.8)
+      && (activeFilter !== 'new' || (item.createdAt && Date.parse(item.createdAt) >= today.getTime() - 30 * 86400000));
+  });
+  if (sortBy === 'Highest Rated') filteredWorkshops.sort((a,b) => b.rating - a.rating);
+  if (sortBy === 'Earliest Date') filteredWorkshops.sort((a,b) => Date.parse(a.date) - Date.parse(b.date));
+  if (sortBy === 'Lowest Price') filteredWorkshops.sort((a,b) => priceOf(a) - priceOf(b));
 
   return (
     <div className="space-y-4">
+      {bookmarkError && <p role="alert" className="text-xs text-red-700">{bookmarkError}</p>}
       
       {/* 1. Hero Header — seamless, no card, mountains on the right */}
       <div className="relative -mx-1 px-1">
@@ -206,7 +158,7 @@ export const DiscoverDemands: React.FC = () => {
             className="w-full px-3 py-1.5 text-[13px] text-[#1A2621] placeholder:text-[#4B5563] bg-transparent outline-none"
           />
           <button
-            type="button"
+            type="button" onClick={() => document.getElementById('discover-results')?.scrollIntoView({ block: 'start' })}
             className="inline-flex items-center justify-center px-6 py-2 rounded-lg bg-[#0B6B35] hover:bg-[#08572B] text-white text-[13px] font-semibold transition-colors shrink-0"
           >
             Search
@@ -215,7 +167,7 @@ export const DiscoverDemands: React.FC = () => {
       </div>
 
       {/* 3. Primary Filter Chips Row */}
-      <div className="flex items-center gap-1 overflow-x-auto text-xs [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex items-center gap-1 flex-wrap text-xs">
         <div className="flex items-center gap-1.5 text-[#1F2A24] text-[12.5px] font-semibold mr-1 shrink-0">
           <SlidersHorizontal className="w-3.5 h-3.5" />
           <span>Filters:</span>
@@ -262,31 +214,24 @@ export const DiscoverDemands: React.FC = () => {
         <div className="h-6 w-px bg-[#D1D5DB] mx-1 shrink-0" />
 
         {[
-          { label: 'All Formats', icon: MapPin },
-          { label: 'All Levels', icon: BarChart2 },
-          { label: 'Any Date', icon: Calendar },
-          { label: 'Any Price', icon: Tag },
-        ].map((d) => {
-          const Icon = d.icon;
-          return (
-            <button
-              key={d.label}
-              type="button"
-              className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white border border-[#E3E7E2] text-[11px] whitespace-nowrap font-medium text-[#1F2A24] hover:border-[#0E6636]/40 transition-colors shrink-0"
-            >
-              <Icon className="w-3.5 h-3.5 text-[#1F2A24]" />
-              <span>{d.label}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-[#1F2A24]" />
-            </button>
-          );
-        })}
+          { label: 'All Formats', value: format, set: setFormat, options: workshopsList.map(w => w.format) },
+          { label: 'All Levels', value: level, set: setLevel, options: workshopsList.map(w => w.level) },
+          { label: 'Any Date', value: month, set: setMonth, options: workshopsList.map(w => monthOf(w.date)) },
+          { label: 'Any Price', value: price, set: setPrice, options: ['Under 50', '50 and above'] },
+        ].map(d => (
+          <select key={d.label} aria-label={d.label} value={d.value} onChange={e => d.set(e.target.value)}
+            className="rounded-lg bg-white border px-2 py-1.5 text-[11px]">
+            <option value="">{d.label}</option>
+            {[...new Set(d.options)].filter(Boolean).map(option => <option key={option}>{option}</option>)}
+          </select>
+        ))}
 
         <button
           type="button"
           onClick={() => {
             setActiveFilter('all');
             setActiveCategory('all');
-            setSearchQuery('');
+            setSearchQuery(''); setFormat(''); setLevel(''); setMonth(''); setPrice(''); setOnlySaved(false); setSortBy('Most Relevant');
           }}
           className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-white border border-[#E3E7E2] text-[11px] whitespace-nowrap font-medium text-[#1F2A24] hover:text-[#0E6636] transition-colors shrink-0 ml-auto"
         >
@@ -296,7 +241,7 @@ export const DiscoverDemands: React.FC = () => {
       </div>
 
       {/* 4. Secondary Category Bar */}
-      <div className="flex items-center justify-between gap-1 rounded-xl bg-[#F3F5F3] p-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex items-center justify-between gap-1 rounded-xl bg-[#F3F5F3] p-1 flex-wrap">
         {CATEGORIES.map((cat) => {
           const Icon = cat.icon;
           const isActive = activeCategory === cat.id;
@@ -304,7 +249,7 @@ export const DiscoverDemands: React.FC = () => {
             <button
               key={cat.id}
               type="button"
-              onClick={() => setActiveCategory(cat.id)}
+              onClick={() => { setActiveCategory(cat.id); setOnlySaved(false); }}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11.5px] font-semibold transition-all shrink-0 whitespace-nowrap ${
                 isActive
                   ? 'bg-[#E3F2E5] text-[#0E6636]'
@@ -317,17 +262,14 @@ export const DiscoverDemands: React.FC = () => {
           );
         })}
 
-        <button
-          type="button"
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11.5px] font-semibold text-[#1F2A24] whitespace-nowrap hover:bg-white/70 transition-colors shrink-0"
-        >
-          <MoreHorizontal className="w-4 h-4 text-[#374151]" />
-          <span>More</span>
-          <ChevronDown className="w-3.5 h-3.5 text-[#374151]" />
-        </button>
+        <select aria-label="More workshop filters" className="rounded-lg bg-white text-xs p-2" value={onlySaved ? 'saved' : CATEGORIES.some(c => c.id === activeCategory) ? '' : activeCategory}
+          onChange={e => { setOnlySaved(e.target.value === 'saved'); setActiveCategory(e.target.value && e.target.value !== 'saved' ? e.target.value : 'all'); }}>
+          <option value="">More</option><option value="saved">Saved workshops</option>
+          {[...new Set(workshopsList.map(w => w.tag))].filter(tag => !CATEGORIES.some(c => c.name.toLowerCase() === tag.toLowerCase())).map(tag => <option key={tag}>{tag}</option>)}
+        </select>
       </div>
 
-      {/* 5. Featured Workshop Hero Banner */}
+      {featured && (
       <div className="relative overflow-hidden rounded-2xl bg-[#0E5F35] text-white shadow-[0_2px_10px_rgba(10,78,44,0.15)] flex flex-col md:flex-row items-stretch min-h-[136px]">
         {/* Right mountains artwork */}
         <div className="hidden md:block absolute right-0 bottom-0 top-0 w-[65%] pointer-events-none select-none overflow-hidden">
@@ -340,11 +282,11 @@ export const DiscoverDemands: React.FC = () => {
 
         {/* Left desk photo */}
         <div className="relative w-full md:w-[35%] shrink-0 min-h-[136px] overflow-hidden">
-          <img
-            src={featuredMlopsDesk}
-            alt="Production MLOps Workshop"
+          {featured.image && <img
+            src={featured.image}
+            alt={featured.title}
             className="absolute inset-0 w-full h-full object-cover object-[62%_60%]"
-          />
+          />}
           <div className="absolute inset-y-0 right-0 w-10 bg-gradient-to-r from-transparent to-[#0B5530]/70" />
           <span className="absolute top-3 left-6 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EAF6EC] border border-[#B9DFC2] text-[#0E6636] text-[10px] font-bold uppercase tracking-wide shadow-sm">
             <Star className="w-3 h-3" />
@@ -355,79 +297,62 @@ export const DiscoverDemands: React.FC = () => {
         {/* Center text */}
         <div className="relative z-10 flex-1 min-w-0 px-5 py-4 flex flex-col justify-center gap-1.5">
           <h2 className="text-[22px] sm:text-[24px] font-serif font-bold text-white leading-tight">
-            Production MLOps: Serving &amp; Monitoring
+            {featured.title}
           </h2>
           <p className="text-[12.5px] text-white/90 leading-snug max-w-[520px]">
-            Build and deploy reliable ML systems to production with modern MLOps practices, monitoring, and real-world tooling.
+            {featured.description}
           </p>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11.5px] text-white pt-1.5">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
-              <span>Nov 19 – Nov 26, 2026</span>
+              <span>{featured.date}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5" />
-              <span>~ 6 hours</span>
+              <span>{featured.duration}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5" />
-              <span>15 / 20 seats</span>
+              <span>{featured.seats} seats</span>
             </div>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-white/70 text-white text-[10.5px] font-medium">
               <BarChart2 className="w-3 h-3" />
-              Intermediate
+              {featured.level}
             </span>
           </div>
 
-          <div className="flex items-center gap-2.5 pt-1.5">
-            <img
-              src={avatarLeila}
-              alt="Dr. Leila Saad"
-              className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-sm"
-            />
-            <div className="leading-tight">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[12.5px] font-bold text-white">Dr. Leila Saad</span>
-                <CheckCircle2 className="w-4 h-4 text-[#0D6034] fill-white" />
-              </div>
-              <span className="text-[11px] text-white/85">ML Engineer &amp; MLOps Lead</span>
-            </div>
-          </div>
+          <p className="pt-1.5 text-[12.5px] font-bold text-white">{featured.instructorName}</p>
         </div>
 
         {/* Right CTAs */}
         <div className="relative z-10 px-6 py-4 flex flex-col justify-center gap-2.5 shrink-0 w-full md:w-[230px]">
-          <Link
-            to="/workshops/ws-mlops"
+          <ReserveLink
+                      workshopId={featured.id}
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-white hover:bg-[#F1FFF6] text-[#0B5530] text-[12.5px] font-bold transition-all shadow-sm whitespace-nowrap"
           >
             <span>Reserve My Seat</span>
             <ArrowRight className="w-4 h-4" />
-          </Link>
+          </ReserveLink>
           <button
             type="button"
+            disabled={savingBookmark} onClick={() => toggleBookmark(featured.id)} aria-pressed={!!bookmarked[featured.id]}
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-white/80 bg-[#0E5F35]/55 backdrop-blur-[2px] hover:bg-[#0E5F35]/75 text-white text-[12.5px] font-semibold transition-colors whitespace-nowrap"
           >
             <Bookmark className="w-4 h-4" />
-            <span>Save for Later</span>
+            <span>{bookmarked[featured.id] ? 'Saved' : 'Save for Later'}</span>
           </button>
         </div>
       </div>
 
-      {/* Dots Carousel Indicator */}
-      <div className="flex items-center justify-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-[#0E6636]" />
-        <span className="w-2 h-2 rounded-full bg-[#D1D5DB]" />
-        <span className="w-2 h-2 rounded-full bg-[#D1D5DB]" />
-      </div>
+      )}
 
       {/* 6. Section Header: "All Workshops" + Count Badge + Sort Dropdown + View Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
         <div className="flex items-center gap-2.5">
-          <h3 className="text-base font-bold text-[#1A2621]">All Workshops</h3>
+          <h3 id="discover-results" className="text-base font-bold text-[#1A2621]">All Workshops</h3>
           <span className="px-2.5 py-0.5 rounded-full bg-[#EBF9EA] border border-[#C5DFD0] text-[#0E6636] text-[11px] font-bold">
-            286 workshops
+            {filteredWorkshops.length} workshops
           </span>
         </div>
 
@@ -472,7 +397,8 @@ export const DiscoverDemands: React.FC = () => {
       </div>
 
       {/* 7. Workshops 4-Column Grid matching reference mockup */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className={viewMode === 'list' ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"}>
+        {!filteredWorkshops.length && <p className="text-sm text-gray-600">No workshops match these filters.</p>}
         {filteredWorkshops.map((item) => (
           <div
             key={item.id}
@@ -480,11 +406,11 @@ export const DiscoverDemands: React.FC = () => {
           >
             {/* Top Thumbnail with Tag & Rating Pill */}
             <div className="relative h-32 w-full overflow-hidden bg-gray-100 shrink-0">
-              <img
+              {item.image && <img
                 src={item.image}
                 alt={item.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
+              />}
               {/* Category Tag pill - exact light background + green text */}
               <span className="absolute top-2 left-2 px-2.5 py-0.5 rounded-full bg-white/95 border border-[#C5DFD0] text-[#0E6636] text-[8.5px] font-bold shadow-2xs backdrop-blur-xs flex items-center gap-1">
                 {item.tag === 'AI & Data' ? (
@@ -502,7 +428,7 @@ export const DiscoverDemands: React.FC = () => {
               {/* Rating Star pill - exact white rounded badge with golden star */}
               <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-white/95 text-[#1A2621] border border-gray-200/60 text-[8.5px] font-bold flex items-center gap-1 shadow-2xs backdrop-blur-xs">
                 <Star className="w-2.5 h-2.5 fill-[#F59E0B] text-[#F59E0B]" />
-                <span>{item.rating}</span>
+                <span>{item.reviewsCount ? item.rating : 'Unrated'}</span>
                 <span className="text-gray-400 font-normal">({item.reviewsCount})</span>
               </span>
             </div>
@@ -511,7 +437,7 @@ export const DiscoverDemands: React.FC = () => {
             <div className="p-3 space-y-2 flex-1 flex flex-col justify-between">
               <div>
                 <h4 className="font-bold text-xs text-[#1A2621] leading-snug line-clamp-2 group-hover:text-[#0E6636] transition-colors">
-                  <Link to={`/workshops/${item.id}`}>
+                  <Link to={workshopLink(item.id)}>
                     {item.title}
                   </Link>
                 </h4>
@@ -538,17 +464,12 @@ export const DiscoverDemands: React.FC = () => {
 
               {/* Instructor profile with exact circular photo and green checkmark */}
               <div className="flex items-center gap-2 pt-0.5">
-                <img
-                  src={item.instructorAvatar}
-                  alt={item.instructorName}
-                  className="w-6 h-6 rounded-full object-cover border border-[#E5E7E0] shrink-0"
-                />
+
                 <div className="min-w-0 flex-1 leading-none">
                   <div className="flex items-center gap-1">
                     <span className="text-[10.5px] font-bold text-[#1A2621] truncate">{item.instructorName}</span>
                     <CheckCircle2 className="w-3 h-3 text-[#17773A] shrink-0" />
                   </div>
-                  <div className="text-[9px] text-gray-400 truncate mt-0.5">{item.instructorRole}</div>
                 </div>
               </div>
 
@@ -559,16 +480,17 @@ export const DiscoverDemands: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <Link
-                    to={`/workshops/${item.id}`}
+                  <ReserveLink
+                      workshopId={item.id}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#17773A] hover:bg-[#0E6636] text-white text-[10.5px] font-bold transition-colors shadow-2xs"
                   >
                     <span>Reserve</span>
                     <ArrowRight className="w-3 h-3" />
-                  </Link>
+                  </ReserveLink>
 
                   <button
                     type="button"
+                    disabled={savingBookmark}
                     onClick={() => toggleBookmark(item.id)}
                     aria-label="Bookmark workshop"
                     className="p-1.5 rounded-xl border border-[#E5E7E0] hover:bg-[#F6F8F7] text-gray-400 hover:text-[#0E6636] transition-colors"

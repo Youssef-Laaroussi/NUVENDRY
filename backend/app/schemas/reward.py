@@ -52,9 +52,18 @@ class DigitalGiftResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class ReferralActivity(BaseModel):
+    id: str
+    name: str
+    created_at: datetime
+    status: str
+    reward_amount_cents: int
+
 class ReferralResponse(BaseModel):
     referral_code: str
+    reward_per_referral_cents: int
     total_referrals: int
     total_earned_cents: int
     pending_referrals: int
+    referrals: List[ReferralActivity]
 

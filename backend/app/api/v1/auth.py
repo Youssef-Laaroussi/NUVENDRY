@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.core.config import settings
 from app.models.entities import User, UserProfile, MerchantProfile, ReferralEvent, StoreCredit, AuditLog, Notification
-from app.schemas.auth import UserRegister, UserLogin, Token, UserResponse, UserProfileUpdate
+from app.schemas.auth import LearnerSettingsUpdate, PasswordChange, UserRegister, UserLogin, Token, UserResponse, UserProfileUpdate
 from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -23,6 +23,15 @@ async def register_user(req: UserRegister, db: AsyncSession = Depends(get_db)):
             detail="An account with this email already exists."
         )
         
+    referrer = None
+    referral_code = (req.referral_code or "").strip().upper()
+    if referral_code:
+        referrer = await db.scalar(select(User).where(
+            User.referral_code == referral_code, User.is_active.is_(True),
+        ))
+        if not referrer:
+            raise HTTPException(422, "Referral code is invalid.")
+
     user_id = str(uuid.uuid4())
     my_referral_code = f"NV-{uuid.uuid4().hex[:6].upper()}"
     
@@ -31,10 +40,12 @@ async def register_user(req: UserRegister, db: AsyncSession = Depends(get_db)):
         email=req.email,
         hashed_password=get_password_hash(req.password),
         full_name=req.full_name,
-        role=req.role if req.role in ("learner", "instructor", "admin") else "learner",
+        role=req.role,
         referral_code=my_referral_code
     )
     db.add(new_user)
+    # Persist the parent row before inserting records that reference its ID.
+    await db.flush()
     
     # Create profile
     profile = UserProfile(
@@ -62,19 +73,12 @@ async def register_user(req: UserRegister, db: AsyncSession = Depends(get_db)):
     )
     db.add(store_credit)
     
-    # Process referral code if provided
-    if req.referral_code:
-        ref_stmt = select(User).where(User.referral_code == req.referral_code.strip())
-        referrer = (await db.execute(ref_stmt)).scalar_one_or_none()
-        if referrer and referrer.id != user_id:
-            ref_event = ReferralEvent(
-                referrer_id=referrer.id,
-                referee_id=user_id,
-                status="pending",
-                reward_amount_cents=1000  # $10.00 credit upon first purchase
-            )
-            db.add(ref_event)
-            
+    if referrer:
+        db.add(ReferralEvent(
+            referrer_id=referrer.id, referee_id=user_id, status="pending",
+            reward_amount_cents=settings.REFERRAL_REWARD_CENTS,
+        ))
+
     # Audit log
     db.add(AuditLog(
         user_id=user_id,
@@ -239,3 +243,76 @@ async def mark_notification_read(
     await db.commit()
     return {"id": notif.id, "is_read": True}
 
+
+@router.get("/settings")
+async def get_workspace_settings(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    from app.models.entities import WorkspaceSettings
+    record = await db.get(WorkspaceSettings, user.id)
+    return record.data if record else {}
+
+@router.put("/settings")
+async def save_workspace_settings(payload: dict, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    import json
+    from app.models.entities import WorkspaceSettings
+    if len(json.dumps(payload).encode()) > 7 * 1024 * 1024:
+        raise HTTPException(413, "Settings and images exceed the 7 MB storage limit.")
+    record = await db.get(WorkspaceSettings, user.id)
+    if record:
+        record.data = payload
+    else:
+        db.add(WorkspaceSettings(user_id=user.id, data=payload))
+    await db.commit()
+    return payload
+
+@router.patch("/settings/learner")
+async def update_learner_settings(
+    payload: LearnerSettingsUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.entities import WorkspaceSettings
+
+    account = (await db.execute(
+        select(User).options(selectinload(User.profile)).where(User.id == user.id).with_for_update()
+    )).scalar_one()
+    record = await db.get(WorkspaceSettings, user.id)
+    data = record.data if record else {}
+    stored_learner = data.get("learner")
+    learner = dict(stored_learner) if isinstance(stored_learner, dict) else {}
+    changes = payload.model_dump(exclude_none=True)
+    full_name = changes.pop("full_name", None)
+    if full_name is not None:
+        account.full_name = full_name
+    preferences = changes.pop("preferences", {})
+    learner.update(changes)
+    if preferences:
+        stored_preferences = learner.get("preferences")
+        learner["preferences"] = {**(stored_preferences if isinstance(stored_preferences, dict) else {}), **preferences}
+    if "interests" in preferences:
+        if not account.profile:
+            account.profile = UserProfile(user_id=user.id)
+        account.profile.skills_interested = preferences["interests"]
+    merged = {**data, "learner": learner}
+    if record:
+        record.data = merged
+    else:
+        db.add(WorkspaceSettings(user_id=user.id, data=merged))
+    await db.commit()
+    return learner
+
+@router.post("/password", status_code=204)
+async def change_password(
+    payload: PasswordChange,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    account = await db.scalar(
+        select(User).where(User.id == user.id).with_for_update().execution_options(populate_existing=True)
+    )
+    if not verify_password(payload.current_password, account.hashed_password):
+        raise HTTPException(400, "Current password is incorrect.")
+    if payload.current_password == payload.new_password:
+        raise HTTPException(422, "Choose a different password.")
+    account.hashed_password = get_password_hash(payload.new_password)
+    db.add(AuditLog(user_id=user.id, action="PASSWORD_CHANGED", resource_type="User", resource_id=user.id))
+    await db.commit()

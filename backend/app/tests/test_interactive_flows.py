@@ -257,3 +257,65 @@ async def test_pending_quote_recalculation_cancel_and_reward_capture_consumption
     )
     assert pause_resp.status_code == 200
     assert pause_resp.json()["is_active"] is False
+
+
+@pytest.mark.asyncio
+async def test_learner_reservation_details_and_reschedule_request(client, db_session):
+    from app.models.entities import AttendanceRecord, Reservation
+
+    now = datetime.now(timezone.utc)
+    learner = User(id="reschedule-learner", email="reschedule@example.com", hashed_password="unused", full_name="Learner", role="learner")
+    instructor = User(id="reschedule-instructor", email="instructor@example.com", hashed_password="unused", full_name="Instructor", role="instructor")
+    merchant = MerchantProfile(id="reschedule-merchant", user_id=instructor.id, business_name="Test Academy")
+    workshop = Workshop(
+        id="reschedule-workshop", merchant_id=merchant.id, title="Production Python",
+        description="A Python workshop", category="Python", price_cents=0,
+        total_seats=10, remaining_seats=9, scheduled_at=now + timedelta(days=1),
+    )
+    reservation = Reservation(
+        id="reschedule-booking", workshop_id=workshop.id, user_id=learner.id,
+        final_amount_cents=0, currency="USD", status="confirmed",
+    )
+    attendance = AttendanceRecord(reservation_id=reservation.id, workshop_id=workshop.id, user_id=learner.id, attended=True)
+    db_session.add_all([learner, instructor, merchant, workshop, reservation, attendance])
+    await db_session.commit()
+
+    learner_headers = {"Authorization": f"Bearer {create_access_token(subject=learner.id)}"}
+    instructor_headers = {"Authorization": f"Bearer {create_access_token(subject=instructor.id)}"}
+    alternate_date = (now + timedelta(days=2)).isoformat()
+    create_url = f"/api/v1/merchant/workshops/{workshop.id}/alternate-sessions"
+    created = await client.post(create_url, json={"scheduled_at": alternate_date}, headers=instructor_headers)
+    assert created.status_code == 201, created.text
+    alternate_id = created.json()["id"]
+    duplicate = await client.post(create_url, json={"scheduled_at": alternate_date}, headers=instructor_headers)
+    assert duplicate.status_code == 409
+    root = "/api/v1/reservations"
+    booked = (await client.get(f"{root}/me", headers=learner_headers)).json()
+    assert booked[0]["workshop"]["category"] == "Python"
+    assert booked[0]["attended"] is True
+    options_url = f"{root}/{reservation.id}/reschedule-options"
+    request_url = f"{root}/{reservation.id}/reschedule-requests"
+    assert (await client.get(options_url, headers=instructor_headers)).status_code == 404
+    options = await client.get(options_url, headers=learner_headers)
+    assert [item["id"] for item in options.json()] == [alternate_id]
+    assert (await client.post(request_url, json={"session_id": "missing"}, headers=learner_headers)).status_code == 409
+    assert (await client.post(request_url, json={"session_id": alternate_id}, headers=learner_headers)).status_code == 201
+    assert (await client.post(request_url, json={"session_id": alternate_id}, headers=learner_headers)).status_code == 409
+    notices = await client.get("/api/v1/auth/notifications", headers=instructor_headers)
+    assert notices.json()[0]["title"] == "Reservation reschedule request"
+    roster = await client.get("/api/v1/merchant/reservations", headers=instructor_headers)
+    assert roster.json()[0]["reschedule_request"]["scheduled_at"]
+    decision_url = f"/api/v1/merchant/reservations/{reservation.id}/reschedule"
+    approved = await client.patch(decision_url, json={"decision": "approved"}, headers=instructor_headers)
+    assert approved.status_code == 200, approved.text
+    updated = (await client.get(f"{root}/me", headers=learner_headers)).json()[0]
+    assert updated["reschedule_status"] == "approved"
+    assert datetime.fromisoformat(updated["workshop"]["scheduled_at"]).replace(tzinfo=timezone.utc) == datetime.fromisoformat(alternate_date)
+    bookmarks = "/api/v1/workshops/bookmarks"
+    bookmark = f"/api/v1/workshops/{workshop.id}/bookmark"
+    assert (await client.put(bookmark, headers=learner_headers)).status_code == 204
+    assert (await client.put(bookmark, headers=learner_headers)).status_code == 204
+    assert [item["id"] for item in (await client.get(bookmarks, headers=learner_headers)).json()] == [workshop.id]
+    assert (await client.get(bookmarks, headers=instructor_headers)).json() == []
+    assert (await client.delete(bookmark, headers=learner_headers)).status_code == 204
+    assert (await client.get(bookmarks, headers=learner_headers)).json() == []

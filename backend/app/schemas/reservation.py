@@ -1,6 +1,6 @@
-from typing import Optional, List
-from datetime import datetime
-from pydantic import BaseModel
+from typing import Optional, List, Literal
+from datetime import datetime, timezone
+from pydantic import AwareDatetime, BaseModel, field_validator
 
 class ReservationQuoteRequest(BaseModel):
     workshop_id: str
@@ -27,10 +27,31 @@ class ReservationCreate(BaseModel):
     campaign_ids: Optional[List[str]] = None
     use_store_credit: bool = False
 
+class ReservedWorkshop(BaseModel):
+    image_url: str | None = None
+    description: str
+    category: str
+    difficulty: str
+    scheduled_at: datetime
+    duration_hours: int
+    total_seats: int
+    remaining_seats: int
+
+    model_config = {"from_attributes": True}
+
+    @field_validator("scheduled_at")
+    @classmethod
+    def normalize_schedule(cls, value):
+        return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
 class ReservationResponse(BaseModel):
     id: str
     workshop_id: str
     workshop_title: Optional[str] = None
+    workshop: Optional[ReservedWorkshop] = None
+    attended: Optional[bool] = None
+    reschedule_status: Optional[str] = None
     user_id: str
     final_amount_cents: int
     currency: str
@@ -43,3 +64,14 @@ class ReservationResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class RescheduleRequest(BaseModel):
+    session_id: str
+
+
+class RescheduleDecision(BaseModel):
+    decision: Literal["approved", "rejected"]
+
+
+class AlternateSessionCreate(BaseModel):
+    scheduled_at: AwareDatetime

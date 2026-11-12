@@ -14,6 +14,8 @@ class DemandExtractor:
         "FastAPI & React Full-Stack": ["fastapi", "react", "fullstack", "full stack", "full-stack", "typescript"],
         "Data Engineering & Kafka": ["data engineering", "kafka", "streaming", "spark", "pipeline", "etl"],
         "LLM Fine-Tuning & RAG": ["rag", "fine-tuning", "fine tuning", "embeddings", "vector db", "retrieval"],
+        "Large Language Models": ["llms", "llm", "large language models", "large language model"],
+        "Python": ["python"],
         "DevOps & Kubernetes": ["kubernetes", "k8s", "docker", "ci/cd", "devops", "cloud"]
     }
     
@@ -35,32 +37,24 @@ class DemandExtractor:
         detected_skills = []
         
         for topic, keywords in self.TOPIC_KEYWORDS.items():
-            matches = [k for k in keywords if k in lower_text]
+            matches = [k for k in keywords if re.search(rf"(?<!\w){re.escape(k)}(?!\w)", lower_text)]
             if len(matches) > max_matches:
                 max_matches = len(matches)
                 extracted_topic = topic
             detected_skills.extend(matches)
             
         detected_skills = list(dict.fromkeys(detected_skills))
-        if not detected_skills:
-            detected_skills = ["Practical Implementation", "Applied Systems"]
             
         # 2. Budget Extraction ($XX or XX dollars or XX USD)
-        budget_match = re.search(r"(\$|usd\s*|dollars\s*)?(\d{1,4})(\s*(dollars|usd|\$))?", lower_text)
-        max_budget_cents = 5000  # default $50.00
+        budget_match = re.search(r"(?:\$|usd\s*)(\d{1,6}(?:\.\d{1,2})?)|\b(\d{1,6}(?:\.\d{1,2})?)\s*(?:dollars|usd|\$)", lower_text)
+        max_budget_cents = 5000
         missing_info = []
-        
         if budget_match:
-            # find the group with numbers
-            for grp in budget_match.groups():
-                if grp and grp.isdigit():
-                    num = int(grp)
-                    if 5 <= num <= 2000:
-                        max_budget_cents = num * 100
-                        break
+            from decimal import Decimal
+            max_budget_cents = int(Decimal(next(g for g in budget_match.groups() if g)) * 100)
         else:
             missing_info.append("Budget not explicitly stated; assumed standard range ($50).")
-            
+
         # 3. Difficulty
         extracted_diff = "intermediate"
         for diff in self.DIFFICULTIES:
@@ -86,7 +80,7 @@ class DemandExtractor:
             language = "German"
             
         # 6. Schedule
-        extracted_schedule = "Weekend"
+        extracted_schedule = "Flexible"
         schedule_found = False
         for sched, pats in self.SCHEDULE_PATTERNS.items():
             for pat in pats:
@@ -98,19 +92,28 @@ class DemandExtractor:
                 break
                 
         if not schedule_found:
-            missing_info.append("Specific schedule not given; defaulted to Weekend.")
+            missing_info.append("Schedule unspecified; all session times can be considered.")
             
         # 7. Delivery format
         delivery_format = "live_interactive"
         if "recorded" in lower_text or "async" in lower_text:
             delivery_format = "on_demand"
-        elif "hands-on" in lower_text or "workshop" in lower_text:
+        elif re.search(r"\b(?:hands[- ]on |practical )?labs?\b", lower_text):
             delivery_format = "hands_on_lab"
             
+        if not max_matches:
+            missing_info.append("Topic needs confirmation.")
+        if not any(re.search(rf"\b{diff}\b", lower_text) for diff in self.DIFFICULTIES):
+            missing_info.append("Difficulty not stated; intermediate is a suggested default.")
+        if not re.search(r"\b(english|french|spanish|german|français|español)\b", lower_text):
+            missing_info.append("Language not stated; English is a suggested default.")
+        if not re.search(r"recorded|async|hands.on|workshop|live", lower_text):
+            missing_info.append("Format not stated; a live session is a suggested default.")
+
         # Confidence Calibration
         confidence = 0.95
         if missing_info:
-            confidence -= 0.08 * len(missing_info)
+            confidence -= 0.03 * len(missing_info)
         confidence = max(0.60, min(0.99, confidence))
         
         # Learning Objective

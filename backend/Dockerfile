@@ -15,7 +15,6 @@ RUN pip install --no-cache-dir greenlet email-validator
 
 COPY app ./app
 COPY seed_demo.py .
-COPY alembic.ini .
 
 EXPOSE 8000
 

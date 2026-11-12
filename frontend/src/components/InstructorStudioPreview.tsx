@@ -74,10 +74,7 @@ export const InstructorStudioPreview: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-6 items-center">
           {/* Left Column: Instructor Value Proposition & CTAs */}
           <div className="lg:col-span-5 xl:col-span-6 space-y-5">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#E6F4EC] text-[#14533C] text-[12px] font-semibold">
-              <Users className="w-4 h-4 text-[#156847] stroke-[1.9]" />
-              <span>For Instructors &amp; Subject Experts</span>
-            </div>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#14533c]">FOR INSTRUCTORS &amp; SUBJECT EXPERTS</span>
 
             <h2 className="text-3xl sm:text-4xl lg:text-[48px] font-serif font-bold text-[#14201B] tracking-tight leading-[1.1]">
               Stop guessing what to build

@@ -7,8 +7,9 @@ from app.core.database import get_db
 from app.models.entities import ResearchExperiment, AuditLog
 from app.schemas.analytics import ResearchEvaluationRequest, ResearchEvaluationResult
 from app.ai.evaluator import evaluator
+from app.api.deps import get_current_instructor
 
-router = APIRouter(prefix="/research", tags=["Academic Research Lab"])
+router = APIRouter(prefix="/research", tags=["Academic Research Lab"], dependencies=[Depends(get_current_instructor)])
 
 @router.post("/evaluations", response_model=List[ResearchEvaluationResult])
 async def execute_evaluation(

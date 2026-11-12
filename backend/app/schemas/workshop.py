@@ -1,6 +1,6 @@
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class OfferProposalCreate(BaseModel):
     cluster_id: str
@@ -42,16 +42,22 @@ class WorkshopCreate(BaseModel):
     category: str = "AI Engineering"
     difficulty: str = "intermediate"
     duration_hours: int = 2
-    price_cents: int
+    price_cents: int = Field(ge=1, le=100000000)
     currency: str = "USD"
-    total_seats: int
+    total_seats: int = Field(ge=1, le=100000)
     scheduled_at: datetime
 
+    image_data: Optional[str] = Field(default=None, max_length=2_796_230)
+    language: Optional[str] = Field(default=None, max_length=50)
+    delivery_format: Optional[Literal["live_online", "in_person", "hybrid", "hands_on_lab", "on_demand"]] = None
+
+
 class WorkshopUpdate(BaseModel):
+    image_data: Optional[str] = Field(default=None, max_length=2_796_230)
     title: Optional[str] = None
     description: Optional[str] = None
-    price_cents: Optional[int] = None
-    total_seats: Optional[int] = None
+    price_cents: Optional[int] = Field(default=None, ge=1, le=100000000)
+    total_seats: Optional[int] = Field(default=None, ge=1, le=100000)
     scheduled_at: Optional[datetime] = None
     is_published: Optional[bool] = None
 
@@ -72,6 +78,10 @@ class WorkshopResponse(BaseModel):
     is_published: bool
     created_at: datetime
     merchant_name: Optional[str] = None
+    instructor_name: Optional[str] = None
+    image_url: Optional[str] = None
+    language: Optional[str] = None
+    delivery_format: Optional[str] = None
 
     class Config:
         from_attributes = True

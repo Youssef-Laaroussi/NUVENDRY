@@ -190,3 +190,47 @@ a:hover .nv-icon-slide,
   }
 }
 
+
+/* Keep table contents within their panel and let long values wrap. */
+:is(.studio-table, .ra-scroll, .lab-scroll, .overflow-x-auto:has(> table)) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:is(.studio-table, .ra-scroll, .lab-scroll, .overflow-x-auto) > table {
+  width: 100%;
+  min-width: 0;
+}
+
+body :is(.studio-table, .ra-scroll, .lab-scroll, .overflow-x-auto):not([hidden]) > table :is(th, td),
+body :is(.studio-table, .ra-scroll, .lab-scroll, .overflow-x-auto) > table :is(.whitespace-nowrap, .ra-badge, .pay-chip, .ws-badge, .ws-topic) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+body .ra-scroll .ra-workshop {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.ra-scroll .ra-person {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+  :is(.studio-table, .ra-scroll, .lab-scroll, .overflow-x-auto) > table {
+    table-layout: fixed;
+  }
+
+  body :is(.studio-table, .ra-scroll, .lab-scroll, .overflow-x-auto):not([hidden]) > table :is(th, td) {
+    padding-inline: 3px;
+  }
+
+  body :is(.ra-scroll, .studio-table) > table :is(.ra-badge, .pay-chip, .ws-badge, .ws-topic) {
+    display: inline-block;
+    max-width: 100%;
+    padding-inline: 3px;
+  }
+}

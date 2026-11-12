@@ -72,7 +72,7 @@ async def list_demands(
     db: AsyncSession = Depends(get_db)
 ):
     stmt = select(LearningDemand).order_by(desc(LearningDemand.created_at))
-    if mine_only:
+    if mine_only or user.role == "learner":
         stmt = stmt.where(LearningDemand.user_id == user.id)
     if topic:
         stmt = stmt.where(LearningDemand.topic.ilike(f"%{topic}%"))
@@ -90,7 +90,7 @@ async def get_demand(
     stmt = select(LearningDemand).where(LearningDemand.id == demand_id)
     result = await db.execute(stmt)
     demand = result.scalar_one_or_none()
-    if not demand:
+    if not demand or (user.role == "learner" and demand.user_id != user.id):
         raise HTTPException(status_code=404, detail="Demand not found.")
     return demand
 

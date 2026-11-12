@@ -1,0 +1,36 @@
+.workshop-detail {
+  background: linear-gradient(180deg, #eef6ef 0, #f7f8f4 28rem);
+}
+
+.workshop-detail-hero {
+  background: linear-gradient(120deg, #f5fbf5, #e8f3ea);
+}
+
+.workshop-detail-art {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 0 auto;
+  width: 62%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: .24;
+  mask-image: linear-gradient(90deg, transparent, black 85%);
+}
+
+.workshop-fee {
+  border-color: #d9e8dd;
+  border-top: 4px solid #205c49;
+  box-shadow: 0 12px 32px #143b2e14;
+}
+
+.workshop-checkout-overlay {
+  background-color: #112d24a6;
+}
+
+.workshop-checkout {
+  background: linear-gradient(140deg, #fff, #f2f8f3);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

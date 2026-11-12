@@ -1,3 +1,4 @@
+import { ReserveLink } from './ReservationPopup';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -98,9 +99,9 @@ export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop }) => {
             className="w-[114px] h-[132px] sm:w-[122px] sm:h-[140px] rounded-xl overflow-hidden shrink-0 bg-[#111827] shadow-2xs block"
           >
             <img
-              src={meta.imageUrl}
+              src={workshop.image_url || meta.imageUrl}
               alt={meta.displayTitle}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className={`w-full h-full ${workshop.image_url ? "object-contain" : "object-cover group-hover:scale-105 transition-transform duration-300"}`}
             />
           </Link>
 
@@ -209,8 +210,8 @@ export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop }) => {
 
         {/* Full-Width Reserve Button */}
         <motion.div whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.97 }}>
-          <Link
-            to={targetUrl}
+          <ReserveLink
+                      workshopId={workshop.id}
             aria-disabled={!isAvailable}
             className={`w-full py-2.5 px-4 rounded-xl text-[13.5px] font-semibold flex items-center justify-center gap-2 transition-all shadow-xs group/btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#135A3E] focus-visible:ring-offset-2 ${
               isAvailable
@@ -222,7 +223,7 @@ export const WorkshopCard: React.FC<WorkshopCardProps> = ({ workshop }) => {
             {isAvailable && (
               <ArrowRight className="w-4 h-4 nv-icon-slide" />
             )}
-          </Link>
+          </ReserveLink>
         </motion.div>
       </div>
     </motion.div>

@@ -1,8 +1,10 @@
+import uuid
 from typing import List, Dict, Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 from app.core.database import get_db
+from app.core.config import settings
 from app.models.entities import (
     User, StoreCredit, DigitalGift, ReferralEvent, 
     Reservation, AttendanceRecord, RewardLedger, RewardCampaign
@@ -133,8 +135,18 @@ async def get_my_referrals(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(ReferralEvent).where(ReferralEvent.referrer_id == user.id)
-    events = (await db.execute(stmt)).scalars().all()
+    if not user.referral_code:
+        account = await db.scalar(select(User).where(User.id == user.id).with_for_update().execution_options(populate_existing=True))
+        if not account.referral_code:
+            account.referral_code = f"NV-{uuid.uuid4().hex[:12].upper()}"
+        await db.commit()
+
+    stmt = (select(ReferralEvent, User.full_name)
+            .join(User, User.id == ReferralEvent.referee_id)
+            .where(ReferralEvent.referrer_id == user.id)
+            .order_by(ReferralEvent.created_at.desc()))
+    rows = (await db.execute(stmt)).all()
+    events = [event for event, _ in rows]
     
     total_referrals = len(events)
     rewarded = [e for e in events if e.status == "rewarded"]
@@ -142,9 +154,12 @@ async def get_my_referrals(
     total_earned = sum(e.reward_amount_cents for e in rewarded)
     
     return ReferralResponse(
-        referral_code=user.referral_code or f"NV-{user.id[:6].upper()}",
+        referral_code=user.referral_code,
+        reward_per_referral_cents=settings.REFERRAL_REWARD_CENTS,
         total_referrals=total_referrals,
         total_earned_cents=total_earned,
-        pending_referrals=len(pending)
+        pending_referrals=len(pending),
+        referrals=[dict(id=e.id, name=name, created_at=e.created_at, status=e.status,
+                        reward_amount_cents=e.reward_amount_cents) for e, name in rows]
     )
 

@@ -1,3 +1,4 @@
+import './LearnerMatchesReferrals.css';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -52,11 +53,25 @@ export const LearnerLayout: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && searchRef.current?.offsetWidth) {
+        event.preventDefault();
+        searchRef.current.focus();
+        searchRef.current.select();
+      }
+    };
+    window.addEventListener('keydown', focusSearch);
+    return () => window.removeEventListener('keydown', focusSearch);
+  }, []);
+
   const displayName = user?.full_name?.split(' ')[0] || 'yassirL';
   const initial = displayName.charAt(0).toUpperCase() || 'Y';
 
   return (
-    <div className="min-h-screen bg-[#F6F8F7] flex flex-col text-[#1A2621]">
+    <div data-matches-referrals={['/app/recommendations', '/app/referrals'].includes(location.pathname) || undefined} className="min-h-screen bg-[#F6F8F7] flex flex-col text-[#1A2621]">
       {/* Top Navbar */}
       <header className="sticky top-0 z-40 h-[52px] sm:h-14 bg-white border-b border-[#E5E7E0] px-4 sm:px-6 flex items-center justify-between shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
         {/* Left: Brand + Hub Badge + Nav Tabs */}
@@ -71,9 +86,7 @@ export const LearnerLayout: React.FC = () => {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group shrink-0">
-            <div className="w-[26px] h-[26px] sm:w-7 sm:h-7 rounded-lg bg-[#0E6636] flex items-center justify-center text-white font-bold text-xs tracking-tight">
-              N
-            </div>
+            <img src="/nuvendry-mark.png" alt="" className="w-[26px] h-[26px] sm:w-7 sm:h-7 shrink-0 rounded-md object-contain" />
             <span className="font-bold text-xs sm:text-sm tracking-wide text-[#1A2621] uppercase">
               NUVENDRY
             </span>
@@ -112,17 +125,23 @@ export const LearnerLayout: React.FC = () => {
         {/* Right: Search + Bell + User Pill */}
         <div className="flex items-center gap-2.5 sm:gap-3.5">
           {/* Search bar */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full border border-[#E2E4DE] bg-white text-xs shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-within:border-[#0E6636]/60 transition-colors">
-            <Search className="w-3.5 h-3.5 text-gray-400" />
+          <form role="search" onSubmit={event => {
+            event.preventDefault();
+            const query = searchRef.current?.value.trim();
+            navigate(query ? '/workshops?search=' + encodeURIComponent(query) : '/workshops');
+          }} className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full border border-[#E2E4DE] bg-white text-xs shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus-within:border-[#0E6636]/60 transition-colors">
+            <button type="submit" aria-label="Search workshops"><Search className="w-3.5 h-3.5 text-gray-400" /></button>
             <input
-              type="text"
+              ref={searchRef}
+              aria-label="Search workshops, topics, or skills"
+              type="search"
               placeholder="Search workshops, topics, or skills..."
               className="bg-transparent border-none outline-none text-xs text-[#1A2621] placeholder:text-gray-400 w-48 lg:w-56"
             />
             <kbd className="hidden lg:inline-block px-1 py-px text-[9px] font-mono text-gray-400 bg-[#F0F2ED] border border-[#E2E4DE] rounded">
               Ctrl K
             </kbd>
-          </div>
+          </form>
 
           {/* Bell Icon */}
           <Link

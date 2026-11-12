@@ -1,3 +1,4 @@
+import { DemandBoard } from './DemandBoard';
 import React, { useEffect, useState, useCallback } from 'react';
 import { api, useSyncRefresh } from '../../api/client';
 import { LearningDemand } from '../../types';
@@ -87,6 +88,10 @@ export const MyDemands: React.FC = () => {
         max_budget_cents: parsed?.max_budget_cents,
         language: parsed?.language,
         preferred_schedule: parsed?.preferred_schedule,
+        preferred_duration_hours: parsed?.preferred_duration_hours,
+        delivery_format: parsed?.delivery_format,
+        currency: parsed?.currency,
+        objective: parsed?.objective,
       });
       setPrompt('');
       setExtracted(null);
@@ -144,26 +149,7 @@ export const MyDemands: React.FC = () => {
 
   return (
     <>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-serif text-charcoal">My Learning Demands</h1>
-            <p className="text-xs text-charcoal/60">
-              Submit custom learning needs and track how they group into workshop opportunities.
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              setShowForm(!showForm);
-              setFeedback(null);
-            }}
-            className="nv-btn-press inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-forest text-ivory text-xs font-semibold hover:bg-charcoal transition-colors shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{showForm ? 'Cancel' : 'Submit New Demand'}</span>
-          </button>
-        </div>
-
+      <DemandBoard demands={demands} loading={loading} onCreate={() => {setShowForm(!showForm); setFeedback(null);}} creating={showForm}>
         {feedback && (
           <div
             role={feedback.type === 'error' ? 'alert' : 'status'}
@@ -234,7 +220,7 @@ export const MyDemands: React.FC = () => {
         )}
 
         {/* Demands List */}
-        {loading ? (
+        {demands.length > 0 && <details className="demand-manage"><summary>Manage my submitted requests ({demands.length})</summary>{loading ? (
           <div className="py-12 text-center text-xs text-charcoal/60">Loading your demands...</div>
         ) : demands.length > 0 ? (
           <div className="space-y-4">
@@ -382,16 +368,8 @@ export const MyDemands: React.FC = () => {
               </div>
             ))}
           </div>
-        ) : (
-          <div className="py-16 text-center bg-white rounded-2xl border border-warmgray p-8 space-y-3">
-            <MessageSquare className="w-8 h-8 text-charcoal/30 mx-auto" />
-            <h3 className="font-semibold text-sm text-charcoal">No demands created yet</h3>
-            <p className="text-xs text-charcoal/60 max-w-sm mx-auto">
-              Start by telling NUVENDRY what you'd like to learn. Instructors inspect demand clusters to create new workshops.
-            </p>
-          </div>
-        )}
-      </div>
+        ) : null}</details>}
+      </DemandBoard>
     </>
   );
 };

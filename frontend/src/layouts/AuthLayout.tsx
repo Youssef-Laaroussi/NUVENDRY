@@ -77,9 +77,7 @@ export const AuthLayout: React.FC = () => {
           aria-label="NUVENDRY Home"
           className="inline-flex items-center gap-3 mb-7 sm:mb-8 group rounded-xl px-2 py-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#147448]"
         >
-          <div className="w-[38px] h-[38px] rounded-[10px] bg-[#147448] group-hover:bg-[#0F5B38] transition-colors flex items-center justify-center text-white font-sans font-extrabold text-[19px] shadow-[0_3px_10px_rgba(20,116,72,0.22)]">
-            N
-          </div>
+          <img src="/nuvendry-mark.png" alt="" className="w-[38px] h-[38px] shrink-0 rounded-md object-contain" />
           <span className="font-sans font-extrabold text-[21px] tracking-[0.03em] text-[#14201E]">
             NUVENDRY
           </span>

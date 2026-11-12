@@ -81,10 +81,7 @@ export const FinalCtaSection: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-6 items-center">
           {/* Left Column: Editorial Headline & Dual CTAs */}
           <div className="lg:col-span-5 space-y-5">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#EAF5EE] text-[#14533C] text-[12px] font-semibold">
-              <FourPointStarIcon className="w-3.5 h-3.5 text-[#7BA23F]" />
-              <span>Demand-Driven Learning Marketplace</span>
-            </div>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#14533c]">DEMAND-DRIVEN LEARNING MARKETPLACE</span>
 
             <h2 className="text-4xl sm:text-5xl lg:text-[52px] font-serif font-medium text-[#111827] tracking-tight leading-[1.08]">
               Turn interest into

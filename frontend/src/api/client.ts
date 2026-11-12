@@ -1,3 +1,4 @@
+import type { AdvisorTurn } from '../types';
 import { useEffect, useRef } from 'react';
 
 const API_BASE = '/api/v1';
@@ -6,6 +7,7 @@ export type SyncDomain =
   | 'demands'
   | 'clusters'
   | 'workshops'
+  | 'bookmarks'
   | 'reservations'
   | 'rewards'
   | 'analytics'
@@ -174,6 +176,15 @@ export const api = {
     emitSync(['user']);
     return res;
   },
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiRequest<void>('/auth/password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    }),
+  getWorkspaceSettings: () => apiRequest<Record<string, any>>('/auth/settings'),
+  updateLearnerSettings: (payload: { full_name?: string; location?: string; photo?: string; preferences?: Partial<{ format: string; level: string; time: string; interests: string[] }> }) =>
+    apiRequest('/auth/settings/learner', { method: 'PATCH', body: JSON.stringify(payload) }),
+  saveWorkspaceSettings: (payload: Record<string, any>) => apiRequest<Record<string, any>>('/auth/settings', {method:'PUT', body:JSON.stringify(payload)}),
   getNotifications: () => apiRequest<any[]>('/auth/notifications'),
   markNotificationRead: async (notificationId: string) => {
     const res = await apiRequest<any>(`/auth/notifications/${notificationId}/read`, { method: 'POST' });
@@ -223,8 +234,16 @@ export const api = {
     return res;
   },
   getRecommendations: () => apiRequest<any[]>('/ai/recommendations'),
+  getAdvisorHistory: () => apiRequest<AdvisorTurn[]>('/ai/advisor'),
+  resetAdvisorHistory: () => apiRequest<void>('/ai/advisor', { method: 'DELETE' }),
+  askAdvisor: (question: string) => apiRequest<AdvisorTurn>('/ai/advisor', { method: 'POST', body: JSON.stringify({ question }) }),
 
   // Workshops
+  getWorkshopBookmarks: () => apiRequest<{ id: string; title: string; category: string; duration_hours: number }[]>('/workshops/bookmarks'),
+  setWorkshopBookmark: async (id: string, saved: boolean) => {
+    await apiRequest<void>(`/workshops/${id}/bookmark`, { method: saved ? 'PUT' : 'DELETE' });
+    emitSync(['bookmarks']);
+  },
   getWorkshops: (params: { category?: string; difficulty?: string; search?: string } = {}) => {
     const query = new URLSearchParams();
     if (params.category) query.set('category', params.category);
@@ -245,6 +264,18 @@ export const api = {
     const res = await apiRequest<any>(`/merchant/workshops/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
     emitSync(['workshops', 'analytics']);
     return res;
+  },
+  deleteWorkshop: async (id: string) => {
+    await apiRequest<void>(`/merchant/workshops/${id}`, { method: 'DELETE' });
+    emitSync(['workshops', 'analytics']);
+  },
+  getMerchantWorkshopImage: async (id: string, signal: AbortSignal) => {
+    const response = await fetch(`${API_BASE}/merchant/workshops/${id}/image`, {
+      signal,
+      headers: { Authorization: `Bearer ${localStorage.getItem('nuvendry_token')}` },
+    });
+    if (!response.ok) throw new Error('Could not load the workshop cover.');
+    return response.blob();
   },
   publishWorkshop: async (id: string) => {
     const res = await apiRequest<any>(`/merchant/workshops/${id}/publish`, { method: 'POST' });
@@ -282,6 +313,27 @@ export const api = {
     emitSync(['reservations', 'workshops', 'analytics']);
     return res;
   },
+  createAlternateSession: (workshopId: string, scheduledAt: string) =>
+    apiRequest<{ id: string; scheduled_at: string }>(`/merchant/workshops/${workshopId}/alternate-sessions`, {
+      method: 'POST', body: JSON.stringify({ scheduled_at: scheduledAt }),
+    }),
+  decideReschedule: async (reservationId: string, decision: 'approved' | 'rejected') => {
+    const response = await apiRequest(`/merchant/reservations/${reservationId}/reschedule`, {
+      method: 'PATCH', body: JSON.stringify({ decision }),
+    });
+    emitSync(['reservations', 'notifications']);
+    return response;
+  },
+  getRescheduleOptions: (id: string) =>
+    apiRequest<{ id: string; scheduled_at: string }[]>(`/reservations/${id}/reschedule-options`),
+  requestReschedule: async (id: string, sessionId: string) => {
+    const response = await apiRequest(`/reservations/${id}/reschedule-requests`, {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
+    });
+    emitSync(['reservations', 'notifications']);
+    return response;
+  },
   getMyReservations: () => apiRequest<any[]>('/reservations/me'),
   getPayPalConfig: () => apiRequest<any>('/paypal/config'),
   createPayPalOrder: (reservation_id: string) => apiRequest<any>('/paypal/orders', { method: 'POST', body: JSON.stringify({ reservation_id }) }),
@@ -298,7 +350,7 @@ export const api = {
   // Analytics & Research
   getAnalyticsOverview: () => apiRequest<any>('/analytics/overview'),
   getDemandTrends: () => apiRequest<any[]>('/analytics/demands'),
-  getPaymentTransactions: () => apiRequest<any[]>('/analytics/payments'),
+  getPaymentTransactions: (includeUncaptured = false) => apiRequest<any[]>(includeUncaptured ? '/analytics/payments?include_uncaptured=true' : '/analytics/payments'),
   getEvaluations: () => apiRequest<any[]>('/research/evaluations'),
   runEvaluation: async (payload: any) => {
     const res = await apiRequest<any[]>('/research/evaluations', { method: 'POST', body: JSON.stringify(payload) });

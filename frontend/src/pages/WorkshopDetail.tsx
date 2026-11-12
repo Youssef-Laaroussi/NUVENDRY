@@ -1,3 +1,9 @@
+import mlopsCover from '../assets/workshop-mlops.jpg';
+import fullstackCover from '../assets/workshop-fullstack.jpg';
+import langgraphCover from '../assets/workshop-langgraph.jpg';
+import mountains from '../assets/hero-mountains-ai.jpg';
+import paypalLogo from '../assets/paypal-logo.svg';
+import './WorkshopDetail.css';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { PayPalCheckoutButton } from '../components/PayPalCheckoutButton';
@@ -8,8 +14,13 @@ import {
   ArrowLeft, AlertCircle, X, CheckCircle2, Loader2
 } from 'lucide-react';
 
-export const WorkshopDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+type WorkshopDetailProps = {
+  popup?: { id: string; returnUrl: string; close: () => void };
+};
+
+export const WorkshopDetail: React.FC<WorkshopDetailProps> = ({ popup }) => {
+  const params = useParams<{ id: string }>();
+  const id = popup?.id ?? params.id;
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
@@ -112,17 +123,25 @@ export const WorkshopDetail: React.FC = () => {
     [id]
   );
 
+  const closeReservation = popup?.close ?? (() => setShowConfirmModal(false));
+
+  useEffect(() => {
+    if (!popup || !workshop || !isAuthenticated || workshop.remaining_seats <= 0) return;
+    setShowConfirmModal(true);
+    void syncReservationHold(true, false);
+  }, [popup?.id, workshop?.id, isAuthenticated, syncReservationHold]);
+
   // Close modal on Escape when not actively capturing PayPal order
   useEffect(() => {
-    if (!showConfirmModal) return;
+    if (!showConfirmModal && !popup) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !captureInFlight) {
-        setShowConfirmModal(false);
+        closeReservation();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showConfirmModal, captureInFlight]);
+  }, [showConfirmModal, captureInFlight, closeReservation, popup]);
 
   const handleOpenReservationModal = async () => {
     if (!isAuthenticated) {
@@ -146,6 +165,23 @@ export const WorkshopDetail: React.FC = () => {
       await syncReservationHold(applyPromotions, checked);
     }
   };
+
+  if (popup && (loading || error || !workshop || !isAuthenticated || (!showConfirmModal && !confirmedCapture))) {
+    return (
+      <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
+        <section role="dialog" aria-modal="true" aria-label="Reserve a workshop" className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-xl">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">Reserve a workshop</h2>
+            <button type="button" onClick={popup.close} aria-label="Close reservation dialog"><X size={20} /></button>
+          </div>
+          <p role="status" className="text-sm">{error || (loading || !workshop || (isAuthenticated && workshop.remaining_seats > 0)
+            ? 'Loading workshop…' : !isAuthenticated ? 'Sign in to reserve your seat.' : 'This workshop is fully booked.')}</p>
+          {!isAuthenticated && <Link className="inline-block rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-white"
+            to={`/sign-in?redirect=${encodeURIComponent(popup.returnUrl)}`}>Sign in</Link>}
+        </section>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -193,9 +229,16 @@ export const WorkshopDetail: React.FC = () => {
         ? 'Omar Belkacem'
         : 'Fatima Zahra');
 
+  const workshopCovers: Record<string, string> = {
+    mlops: mlopsCover,
+    'react + fastapi': fullstackCover,
+    langgraph: langgraphCover,
+    'langgraph agents': langgraphCover,
+  };
+  const workshopCover = workshop.image_url || (workshopCovers[workshop.category.trim().toLowerCase()] ?? mountains);
   const storeCreditAvailableCents = rewardsInfo?.store_credit_cents || 0;
   const basePriceDollars = (workshop.price_cents / 100).toFixed(2);
-  const effectiveFinalCents = activeReservation && showConfirmModal
+  const effectiveFinalCents = activeReservation && (showConfirmModal || confirmedCapture)
     ? activeReservation.final_amount_cents
     : quote
       ? quote.final_amount_cents
@@ -210,18 +253,22 @@ export const WorkshopDetail: React.FC = () => {
     : 0;
 
   return (
-    <div className="bg-ivory min-h-screen py-10">
+    <div className={popup ? "workshop-detail" : "workshop-detail min-h-screen py-10"}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        {/* Navigation Breadcrumb */}
+        {!popup && (
+        /* Navigation Breadcrumb */
         <Link
           to="/workshops"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-charcoal/60 hover:text-forest transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Workshops
         </Link>
+        )}
 
         {confirmedCapture ? (
-          <div className="max-w-xl mx-auto bg-white p-8 rounded-3xl border border-warmgray text-center space-y-5 shadow-lg">
+          <div className={popup ? "fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" : undefined}>
+          <div role={popup ? "dialog" : undefined} aria-modal={popup ? true : undefined} aria-label="Reservation confirmed" className="w-full max-w-xl mx-auto bg-white p-8 rounded-3xl border border-warmgray text-center space-y-5 shadow-lg">
+            {popup && <button type="button" onClick={popup.close} aria-label="Close confirmation" className="ml-auto block"><X size={20} /></button>}
             <div className="w-14 h-14 rounded-full bg-mint text-forest flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-8 h-8 text-forest" />
             </div>
@@ -240,7 +287,7 @@ export const WorkshopDetail: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-charcoal/60">PayPal Capture ID</span>
-                <span className="font-mono text-forest">{confirmedCapture.paypal_capture_id || 'CAP-SANDBOX-SUCCESS'}</span>
+                <span className="font-mono text-forest">{confirmedCapture.paypal_capture_id}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-charcoal/60">Amount Paid</span>
@@ -255,12 +302,14 @@ export const WorkshopDetail: React.FC = () => {
               View My Reservations & Tickets →
             </Link>
           </div>
-        ) : (
+          </div>
+        ) : !popup && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left Content Column */}
             <div className="lg:col-span-8 space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
+              <div className="workshop-detail-hero relative isolate overflow-hidden rounded-3xl border border-[#D9E8DD] p-6 sm:p-9 space-y-4">
+                <img src={workshop.image_url || mountains} alt="" className="workshop-detail-art" />
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-mono uppercase px-2.5 py-0.5 rounded-full bg-mint text-forest font-semibold">
                     {workshop.category}
                   </span>
@@ -268,7 +317,7 @@ export const WorkshopDetail: React.FC = () => {
                     {workshop.difficulty} Level
                   </span>
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-serif text-charcoal tracking-tight leading-tight">
+                <h1 className="text-3xl sm:text-4xl font-serif font-semibold text-[#143B2E] tracking-tight leading-tight">
                   {workshop.title}
                 </h1>
                 <p className="text-xs sm:text-sm text-charcoal/70 leading-relaxed">
@@ -312,7 +361,7 @@ export const WorkshopDetail: React.FC = () => {
             </div>
 
             {/* Right Booking Card */}
-            <div className="lg:col-span-4 sticky top-24 bg-white rounded-2xl border border-warmgray p-6 shadow-md space-y-6">
+            <div className="workshop-fee lg:col-span-4 lg:sticky lg:top-24 bg-white rounded-2xl border border-warmgray p-6 shadow-md space-y-6">
               <div className="flex items-baseline justify-between border-b border-warmgray/60 pb-4">
                 <span className="text-xs text-charcoal/60">Workshop Fee</span>
                 <div className="text-right">
@@ -384,9 +433,9 @@ export const WorkshopDetail: React.FC = () => {
         {/* Modal: Confirm Your Reservation matching exact Bottom-Right mock */}
         {showConfirmModal && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/60 backdrop-blur-xs"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 workshop-checkout-overlay bg-charcoal/60 backdrop-blur-sm"
             onClick={() => {
-              if (!captureInFlight) setShowConfirmModal(false);
+              if (!captureInFlight) closeReservation();
             }}
           >
             <div
@@ -394,7 +443,7 @@ export const WorkshopDetail: React.FC = () => {
               aria-modal="true"
               aria-labelledby="confirm-reservation-title"
               onClick={(e) => e.stopPropagation()}
-              className="nv-stage-panel bg-white rounded-3xl border border-warmgray max-w-4xl w-full p-6 sm:p-8 shadow-2xl space-y-6 relative"
+              className="workshop-checkout nv-stage-panel rounded-3xl border border-[#D9E8DD] max-w-4xl w-full p-4 sm:p-7 shadow-2xl space-y-5 relative"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between pb-4 border-b border-warmgray">
@@ -408,7 +457,7 @@ export const WorkshopDetail: React.FC = () => {
                   type="button"
                   disabled={captureInFlight}
                   aria-label="Close reservation dialog"
-                  onClick={() => setShowConfirmModal(false)}
+                  onClick={closeReservation}
                   className="nv-btn-press p-1.5 rounded-lg text-charcoal/50 hover:bg-warmgray/50 disabled:opacity-40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
                 >
                   <X className="w-5 h-5" />
@@ -416,10 +465,11 @@ export const WorkshopDetail: React.FC = () => {
               </div>
 
               {/* 3-Column / 3-Box Horizontal Layout matching mock */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
                 {/* Column 1: Workshop Details */}
-                <div className="bg-ivory/80 rounded-2xl p-5 border border-warmgray space-y-3 flex flex-col justify-between">
+                <div className="bg-white rounded-2xl p-4 border border-[#D9E8DD] space-y-3 flex flex-col justify-between">
                   <div className="space-y-2">
+                    <img src={workshopCover} alt={workshop.title} width={640} height={360} className={`mb-3 aspect-video w-full rounded-xl ${workshop.image_url ? "object-contain bg-gray-50" : "object-cover"}`} />
                     <h4 className="font-semibold text-sm text-charcoal leading-snug">
                       {workshop.title}
                     </h4>
@@ -433,7 +483,7 @@ export const WorkshopDetail: React.FC = () => {
                       <span className="text-charcoal/50">Duration:</span>
                       <span>{workshop.duration_hours} hours</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-2 [&>span:last-child]:text-right">
                       <span className="text-charcoal/50">Instructor:</span>
                       <span>{instructorDisplayName}</span>
                     </div>
@@ -445,7 +495,7 @@ export const WorkshopDetail: React.FC = () => {
                 </div>
 
                 {/* Column 2: Apply Rewards & Price Breakdown */}
-                <div className="bg-ivory/80 rounded-2xl p-5 border border-warmgray space-y-4 flex flex-col justify-between">
+                <div className="bg-white rounded-2xl p-4 border border-[#D9E8DD] space-y-4 flex flex-col justify-between">
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-mono uppercase text-charcoal/60 font-semibold">
@@ -514,7 +564,7 @@ export const WorkshopDetail: React.FC = () => {
                 </div>
 
                 {/* Column 3: Pay with PayPal */}
-                <div className="bg-white rounded-2xl p-5 border border-warmgray shadow-xs space-y-4 flex flex-col justify-between">
+                <div className="bg-[#EDF6EF] rounded-2xl p-4 border border-[#D9E8DD] space-y-4 flex flex-col justify-between">
                   <div className="space-y-3">
                     <span className="text-[11px] font-mono uppercase text-charcoal/60 font-semibold block">
                       Pay with PayPal
@@ -522,9 +572,7 @@ export const WorkshopDetail: React.FC = () => {
 
                     {/* Official PayPal Logo Badge */}
                     <div className="py-2.5 px-4 bg-ivory rounded-xl border border-warmgray flex items-center justify-center">
-                      <span className="font-serif italic font-bold text-xl text-[#003087]">
-                        Pay<span className="text-[#0079C1]">Pal</span>
-                      </span>
+                      <img src={paypalLogo} alt="PayPal" className="h-5 w-auto max-w-full" />
                     </div>
 
                     <p className="text-[11px] text-charcoal/60 leading-relaxed text-center">

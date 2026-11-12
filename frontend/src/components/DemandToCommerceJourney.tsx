@@ -375,10 +375,7 @@ export const DemandToCommerceJourney: React.FC<Props> = ({
         {/* Section Header                                            */}
         {/* ========================================================= */}
         <div className="text-center max-w-4xl mx-auto mb-12 space-y-3.5">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#E6F3EB] text-[#14533C] text-xs font-semibold tracking-wide">
-            <Layers className="w-3.5 h-3.5 text-[#14533C] stroke-[2]" />
-            <span>How the Marketplace Works</span>
-          </div>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#14533c]">HOW THE MARKETPLACE WORKS</span>
 
           <h2 className="text-3xl sm:text-4xl lg:text-[48px] font-serif font-bold text-[#111827] tracking-tight leading-[1.12]">
             The marketplace begins{' '}

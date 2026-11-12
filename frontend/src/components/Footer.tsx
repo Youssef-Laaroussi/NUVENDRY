@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Mail, Code2, Check } from 'lucide-react';
+import { Mail, Check } from 'lucide-react';
 import { scrollToSectionById } from '../layouts/PublicLayout';
 
 export const Footer: React.FC = () => {
@@ -52,9 +52,7 @@ export const Footer: React.FC = () => {
               onClick={(e) => handleFooterLinkClick(e, '/')}
               className="inline-flex items-center gap-2.5"
             >
-              <div className="w-9 h-9 rounded-[10px] bg-[#146C43] text-white font-sans font-extrabold text-[18px] flex items-center justify-center shadow-2xs">
-                N
-              </div>
+              <img src="/nuvendry-mark.png" alt="" className="w-9 h-9 shrink-0 rounded-md object-contain" />
               <span className="font-extrabold text-[19px] tracking-[0.02em] text-[#111827]">
                 NUVENDRY
               </span>
@@ -288,18 +286,9 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* ========================================================= */}
-        {/* Bottom Technical Prototype Disclosure & Copyright Row     */}
+        {/* Copyright                                                 */}
         {/* ========================================================= */}
-        <div className="mt-10 pt-5 border-t border-[#E1E9E3] flex flex-col md:flex-row items-center justify-between gap-3 text-[12px] text-[#374151]">
-          <div className="flex items-center gap-2 text-center md:text-left">
-            <Code2 className="w-4 h-4 text-[#4B5563] shrink-0 hidden sm:block" />
-            <p>
-              <strong className="font-bold text-[#111827]">Technical Prototype:</strong> Connected
-              to PayPal Sandbox · Built with FastAPI + PostgreSQL (workshops, demand, reservations,
-              rewards). For demonstration only.
-            </p>
-          </div>
-
+        <div className="mt-10 pt-5 border-t border-[#E1E9E3] flex justify-center md:justify-end text-[12px] text-[#374151]">
           <p className="shrink-0">
             © 2026 <strong className="font-bold text-[#111827]">NUVENDRY.</strong> All rights
             reserved.

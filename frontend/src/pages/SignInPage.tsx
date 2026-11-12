@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import {
@@ -39,7 +39,8 @@ export const SignInPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login } = useAuth();
-  const redirectParam = searchParams.get('redirect') || '';
+  const location = useLocation();
+  const redirectParam = searchParams.get('redirect') || location.state?.from || '';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -88,24 +89,7 @@ export const SignInPage: React.FC = () => {
   };
 
   const handlePayPalSignIn = async () => {
-    setPaypalLoading(true);
-    setError(null);
-    setResetNotice(null);
-    try {
-      const data = await api.login({
-        email: 'learner.sophia@example.com',
-        password: 'Learner2026!',
-      });
-      login(data.access_token, data);
-      routeByRole(data.role);
-    } catch (err: any) {
-      setError(
-        err.message ||
-          'PayPal Sandbox sign-in requires the backend API to be running with seeded demo accounts.'
-      );
-    } finally {
-      setPaypalLoading(false);
-    }
+    setError('Sign in with your NUVENDRY email and password. PayPal is available at checkout, not for account login.');
   };
 
   return (

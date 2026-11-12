@@ -186,10 +186,7 @@ export const RewardsShowcase: React.FC<RewardsShowcaseProps> = ({ workshops = []
         {/* Section Header                                            */}
         {/* ========================================================= */}
         <div className="text-center max-w-3xl mx-auto mb-12 space-y-3.5">
-          <div className="inline-flex items-center gap-1.5 px-4 py-1 rounded-full bg-[#E5F3EB] text-[#14533C] text-[11px] font-bold uppercase tracking-[0.09em]">
-            <Gift className="w-3.5 h-3.5 text-[#14533C] stroke-[2]" />
-            <span>MERCHANT-FUNDED</span>
-          </div>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#14533c]">MERCHANT-FUNDED</span>
 
           <h2 className="text-3xl sm:text-4xl lg:text-[48px] font-serif font-medium text-[#111827] tracking-tight leading-[1.12]">
             Six Real{' '}

@@ -3,17 +3,17 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 class DemandCreate(BaseModel):
-    raw_prompt: str
+    raw_prompt: str = Field(min_length=5, max_length=10000)
     topic: Optional[str] = None
     related_skills: Optional[List[str]] = None
     objective: Optional[str] = None
-    preferred_difficulty: Optional[str] = "intermediate"
-    preferred_duration_hours: Optional[int] = 2
-    language: Optional[str] = "English"
-    max_budget_cents: Optional[int] = 5000
-    currency: Optional[str] = "USD"
-    preferred_schedule: Optional[str] = "Weekend"
-    delivery_format: Optional[str] = "live_interactive"
+    preferred_difficulty: Optional[str] = None
+    preferred_duration_hours: Optional[int] = None
+    language: Optional[str] = None
+    max_budget_cents: Optional[int] = None
+    currency: Optional[str] = None
+    preferred_schedule: Optional[str] = None
+    delivery_format: Optional[str] = None
 
 class DemandUpdate(BaseModel):
     topic: Optional[str] = None

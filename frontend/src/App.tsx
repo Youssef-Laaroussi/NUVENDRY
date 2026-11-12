@@ -1,5 +1,7 @@
+import { RequireAuth } from './components/RequireAuth';
+import { MyLearning } from './pages/learner/MyLearning';
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 
 // Layouts
@@ -12,7 +14,7 @@ import { AdminLayout } from './layouts/AdminLayout';
 // Public Pages
 import { LandingPage } from './pages/LandingPage';
 import { WorkshopsMarketplace } from './pages/WorkshopsMarketplace';
-import { WorkshopDetail } from './pages/WorkshopDetail';
+import { ReservationPopup } from './components/ReservationPopup';
 import { DemandIntroPage } from './pages/DemandIntroPage';
 import { SignInPage } from './pages/SignInPage';
 import { SignUpPage } from './pages/SignUpPage';
@@ -44,6 +46,11 @@ import { MerchantSettings } from './pages/merchant/MerchantSettings';
 // Admin Page
 import { AdminOverview } from './pages/admin/AdminOverview';
 
+function LegacyWorkshopRedirect() {
+  const { id } = useParams();
+  return <Navigate replace to={id ? `/workshops?reserve=${encodeURIComponent(id)}` : '/workshops'} />;
+}
+
 export const App: React.FC = () => {
   return (
     <AuthProvider>
@@ -53,7 +60,7 @@ export const App: React.FC = () => {
           <Route element={<PublicLayout />}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/workshops" element={<WorkshopsMarketplace />} />
-            <Route path="/workshops/:id" element={<WorkshopDetail />} />
+            <Route path="/workshops/:id" element={<LegacyWorkshopRedirect />} />
             <Route path="/demand" element={<DemandIntroPage />} />
             <Route
               path="/how-it-works"
@@ -78,10 +85,11 @@ export const App: React.FC = () => {
           </Route>
 
           {/* 3. Authenticated Learner Workspace: dedicated app topbar + persistent learner sidebar */}
+          <Route element={<RequireAuth />}>
           <Route element={<LearnerLayout />}>
             <Route path="/app/overview" element={<LearnerOverview />} />
             <Route path="/app/my-demands" element={<MyDemands />} />
-            <Route path="/app/my-learning" element={<LearnerReservations />} />
+            <Route path="/app/my-learning" element={<MyLearning />} />
             <Route path="/app/discover" element={<DiscoverDemands />} />
             <Route path="/app/recommendations" element={<LearnerRecommendations />} />
             <Route path="/app/reservations" element={<LearnerReservations />} />
@@ -90,8 +98,10 @@ export const App: React.FC = () => {
             <Route path="/app/notifications" element={<LearnerOverview />} />
             <Route path="/app/settings" element={<LearnerSettings />} />
           </Route>
+          </Route>
 
           {/* 4. Authenticated Merchant Workspace: dedicated app topbar + persistent merchant sidebar */}
+          <Route element={<RequireAuth roles={['instructor', 'admin']} />}>
           <Route element={<MerchantLayout />}>
             <Route path="/merchant/overview" element={<MerchantOverview />} />
             <Route path="/merchant/demand-intelligence" element={<DemandIntelligence />} />
@@ -104,8 +114,10 @@ export const App: React.FC = () => {
             <Route path="/merchant/research-lab" element={<ResearchLab />} />
             <Route path="/merchant/settings" element={<MerchantSettings />} />
           </Route>
+          </Route>
 
           {/* 5. Authenticated Admin Workspace: dedicated app topbar + admin governance sidebar */}
+          <Route element={<RequireAuth roles={['admin']} />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={<AdminOverview />} />
             <Route path="/admin/users" element={<AdminOverview />} />
@@ -113,10 +125,12 @@ export const App: React.FC = () => {
             <Route path="/admin/payments" element={<AdminOverview />} />
             <Route path="/admin/audit" element={<AdminOverview />} />
           </Route>
+          </Route>
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <ReservationPopup />
       </BrowserRouter>
     </AuthProvider>
   );

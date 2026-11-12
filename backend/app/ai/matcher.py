@@ -23,6 +23,12 @@ class DemandMatcher:
     def check_constraints_compatible(self, d1: Dict[str, Any], d2: Dict[str, Any]) -> Tuple[bool, List[str]]:
         violations = []
         
+        if d1.get("currency", "USD") != d2.get("currency", "USD"):
+            violations.append("Currency mismatch")
+        for key in ("preferred_schedule", "delivery_format"):
+            a, b = d1.get(key), d2.get(key)
+            if a and b and a != b and "Flexible" not in (a, b):
+                violations.append(f"Incompatible {key}")
         # 1. Language constraint
         if d1.get("language", "English").lower() != d2.get("language", "English").lower():
             violations.append("Language mismatch")
