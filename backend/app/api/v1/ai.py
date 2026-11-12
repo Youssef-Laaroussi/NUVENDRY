@@ -330,7 +330,7 @@ async def ask_advisor(
 ):
     previous = await advisor_history(db, user.id, limit=4)
     workshops = (await db.scalars(
-        available_workshops().order_by(Workshop.scheduled_at)
+        select(Workshop).where(Workshop.is_published.is_(True)).order_by(Workshop.scheduled_at)
     )).all()
     interests = user.profile.skills_interested or [] if user.profile else []
     answer, sources, mode = await advise(

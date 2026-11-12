@@ -86,7 +86,7 @@ class LearningDemand(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     
     user = relationship("User", back_populates="demands")
-    cluster_memberships = relationship("ClusterMembership", back_populates="demand")
+    cluster_memberships = relationship("ClusterMembership", back_populates="demand", cascade="all, delete")
 
 class DemandCluster(Base):
     __tablename__ = "demand_clusters"

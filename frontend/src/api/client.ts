@@ -3,6 +3,15 @@ import { useEffect, useRef } from 'react';
 
 const API_BASE = '/api/v1';
 
+export type AccountNotification = {
+  id: string;
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+};
+
 export type SyncDomain =
   | 'demands'
   | 'clusters'
@@ -185,7 +194,7 @@ export const api = {
   updateLearnerSettings: (payload: { full_name?: string; location?: string; photo?: string; preferences?: Partial<{ format: string; level: string; time: string; interests: string[] }> }) =>
     apiRequest('/auth/settings/learner', { method: 'PATCH', body: JSON.stringify(payload) }),
   saveWorkspaceSettings: (payload: Record<string, any>) => apiRequest<Record<string, any>>('/auth/settings', {method:'PUT', body:JSON.stringify(payload)}),
-  getNotifications: () => apiRequest<any[]>('/auth/notifications'),
+  getNotifications: () => apiRequest<AccountNotification[]>('/auth/notifications'),
   markNotificationRead: async (notificationId: string) => {
     const res = await apiRequest<any>(`/auth/notifications/${notificationId}/read`, { method: 'POST' });
     emitSync(['notifications']);

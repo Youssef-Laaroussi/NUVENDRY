@@ -147,9 +147,132 @@ export const MyDemands: React.FC = () => {
     }
   };
 
+  const renderDemandActions = (d: LearningDemand) => editingId === d.id ? (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div>
+          <label className="text-[11px] font-medium text-charcoal/70 mb-1 block">Topic</label>
+          <input
+            type="text"
+            value={editTopic}
+            onChange={(e) => setEditTopic(e.target.value)}
+            className="w-full p-2 bg-ivory border border-warmgray rounded-lg text-xs"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] font-medium text-charcoal/70 mb-1 block">Budget (USD)</label>
+          <input
+            type="number"
+            step="0.50"
+            min="1"
+            value={editBudgetUsd}
+            onChange={(e) => setEditBudgetUsd(e.target.value)}
+            className="w-full p-2 bg-ivory border border-warmgray rounded-lg text-xs font-mono"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] font-medium text-charcoal/70 mb-1 block">Difficulty</label>
+          <select
+            value={editDifficulty}
+            onChange={(e) => setEditDifficulty(e.target.value)}
+            className="w-full p-2 bg-ivory border border-warmgray rounded-lg text-xs"
+          >
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-[11px] font-medium text-charcoal/70 mb-1 block">Schedule</label>
+          <input
+            type="text"
+            value={editSchedule}
+            onChange={(e) => setEditSchedule(e.target.value)}
+            placeholder="e.g. Weekend"
+            className="w-full p-2 bg-ivory border border-warmgray rounded-lg text-xs"
+          />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={savingId === d.id}
+          onClick={() => handleSaveEdit(d.id)}
+          className="nv-btn-press px-3 py-1.5 bg-forest text-ivory text-xs font-semibold rounded-md disabled:opacity-60 flex items-center gap-1.5"
+        >
+          {savingId === d.id && <Loader2 className="w-3 h-3 animate-spin" />}
+          <span>Save</span>
+        </button>
+        <button
+          type="button"
+          disabled={savingId === d.id}
+          onClick={() => setEditingId(null)}
+          className="px-3 py-1.5 bg-warmgray text-charcoal text-xs font-semibold rounded-md"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div className="flex items-center gap-2">
+      {confirmDeleteId === d.id ? (
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            disabled={deletingId === d.id}
+            onClick={() => handleDelete(d.id)}
+            className="nv-btn-press px-2.5 py-1 rounded bg-red-600 text-white text-[11px] font-semibold flex items-center gap-1"
+          >
+            {deletingId === d.id && <Loader2 className="w-3 h-3 animate-spin" />}
+            <span>Confirm delete</span>
+          </button>
+          <button
+            type="button"
+            disabled={deletingId === d.id}
+            onClick={() => setConfirmDeleteId(null)}
+            className="px-2 py-1 rounded bg-warmgray text-charcoal text-[11px] font-medium"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setConfirmDeleteId(null);
+                setEditingId(d.id);
+              setEditTopic(d.topic);
+              setEditBudgetUsd((d.max_budget_cents / 100).toFixed(2));
+              setEditDifficulty(d.preferred_difficulty || 'intermediate');
+              setEditSchedule(d.preferred_schedule || '');
+            }}
+            className="inline-flex items-center gap-1 p-1.5 rounded-md text-charcoal/60 hover:text-forest hover:bg-ivory transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+            title="Edit"
+            aria-label={`Edit ${d.topic}`}
+          >
+            <Edit2 className="w-3.5 h-3.5" /> Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+                setEditingId(null);
+                setConfirmDeleteId(d.id);
+              }}
+            className="inline-flex items-center gap-1 p-1.5 rounded-md text-charcoal/60 hover:text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+            title="Delete"
+            aria-label={`Delete ${d.topic}`}
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Delete
+          </button>
+        </>
+      )}
+    </div>
+  );
+
   return (
     <>
-      <DemandBoard demands={demands} loading={loading} onCreate={() => {setShowForm(!showForm); setFeedback(null);}} creating={showForm}>
+      <DemandBoard demands={demands} loading={loading} onCreate={() => {setShowForm(!showForm); setFeedback(null);}} creating={showForm} renderActions={renderDemandActions}>
         {feedback && (
           <div
             role={feedback.type === 'error' ? 'alert' : 'status'}
@@ -219,156 +342,6 @@ export const MyDemands: React.FC = () => {
           </div>
         )}
 
-        {/* Demands List */}
-        {demands.length > 0 && <details className="demand-manage"><summary>Manage my submitted requests ({demands.length})</summary>{loading ? (
-          <div className="py-12 text-center text-xs text-charcoal/60">Loading your demands...</div>
-        ) : demands.length > 0 ? (
-          <div className="space-y-4">
-            {demands.map((d) => (
-              <div key={d.id} className="nv-card-lift bg-white rounded-2xl border border-warmgray p-5 space-y-3 shadow-xs">
-                {editingId === d.id ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div>
-                        <label className="text-[11px] font-medium text-charcoal/70 mb-1 block">Topic</label>
-                        <input
-                          type="text"
-                          value={editTopic}
-                          onChange={(e) => setEditTopic(e.target.value)}
-                          className="w-full p-2 bg-ivory border border-warmgray rounded-lg text-xs"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-medium text-charcoal/70 mb-1 block">Budget (USD)</label>
-                        <input
-                          type="number"
-                          step="0.50"
-                          min="1"
-                          value={editBudgetUsd}
-                          onChange={(e) => setEditBudgetUsd(e.target.value)}
-                          className="w-full p-2 bg-ivory border border-warmgray rounded-lg text-xs font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-medium text-charcoal/70 mb-1 block">Difficulty</label>
-                        <select
-                          value={editDifficulty}
-                          onChange={(e) => setEditDifficulty(e.target.value)}
-                          className="w-full p-2 bg-ivory border border-warmgray rounded-lg text-xs"
-                        >
-                          <option value="beginner">Beginner</option>
-                          <option value="intermediate">Intermediate</option>
-                          <option value="advanced">Advanced</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-medium text-charcoal/70 mb-1 block">Schedule</label>
-                        <input
-                          type="text"
-                          value={editSchedule}
-                          onChange={(e) => setEditSchedule(e.target.value)}
-                          placeholder="e.g. Weekend"
-                          className="w-full p-2 bg-ivory border border-warmgray rounded-lg text-xs"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={savingId === d.id}
-                        onClick={() => handleSaveEdit(d.id)}
-                        className="nv-btn-press px-3 py-1.5 bg-forest text-ivory text-xs font-semibold rounded-md disabled:opacity-60 flex items-center gap-1.5"
-                      >
-                        {savingId === d.id && <Loader2 className="w-3 h-3 animate-spin" />}
-                        <span>Save</span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={savingId === d.id}
-                        onClick={() => setEditingId(null)}
-                        className="px-3 py-1.5 bg-warmgray text-charcoal text-xs font-semibold rounded-md"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-charcoal">{d.topic}</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-mint text-forest font-semibold uppercase">
-                          {d.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {confirmDeleteId === d.id ? (
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              disabled={deletingId === d.id}
-                              onClick={() => handleDelete(d.id)}
-                              className="nv-btn-press px-2.5 py-1 rounded bg-red-600 text-white text-[11px] font-semibold flex items-center gap-1"
-                            >
-                              {deletingId === d.id && <Loader2 className="w-3 h-3 animate-spin" />}
-                              <span>Confirm</span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={deletingId === d.id}
-                              onClick={() => setConfirmDeleteId(null)}
-                              className="px-2 py-1 rounded bg-warmgray text-charcoal text-[11px] font-medium"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingId(d.id);
-                                setEditTopic(d.topic);
-                                setEditBudgetUsd((d.max_budget_cents / 100).toFixed(2));
-                                setEditDifficulty(d.preferred_difficulty || 'intermediate');
-                                setEditSchedule(d.preferred_schedule || '');
-                              }}
-                              className="p-1.5 rounded-md text-charcoal/60 hover:text-forest hover:bg-ivory transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
-                              title="Edit"
-                              aria-label={`Edit ${d.topic}`}
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDeleteId(d.id)}
-                              className="p-1.5 rounded-md text-charcoal/60 hover:text-red-600 hover:bg-red-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                              title="Delete"
-                              aria-label={`Delete ${d.topic}`}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-charcoal/80 italic bg-ivory p-3 rounded-xl border border-warmgray/50">
-                      "{d.raw_prompt}"
-                    </p>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-charcoal/60 pt-2 border-t border-warmgray/50">
-                      <div>Budget: <strong>${(d.max_budget_cents / 100).toFixed(2)} USD</strong></div>
-                      <div>Format: <strong className="capitalize">{d.delivery_format.replace('_', ' ')}</strong></div>
-                      <div>Level: <strong className="capitalize">{d.preferred_difficulty}</strong></div>
-                      <div>Confidence: <strong>{Math.round(d.confidence_score * 100)}%</strong></div>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : null}</details>}
       </DemandBoard>
     </>
   );

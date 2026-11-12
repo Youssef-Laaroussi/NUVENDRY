@@ -2,11 +2,12 @@ import './InstructorStudio.css';
 import './InstructorSidebar.css';
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { InstructorNotifications } from '../components/InstructorNotifications';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, Layers, Sparkles, BookOpen, Users, 
   Gift, CreditCard, BarChart3, FlaskConical, Settings, 
-  LogOut, Menu, X, ShieldCheck, ArrowRight, Bell, ChevronDown
+  LogOut, Menu, X, ShieldCheck, ArrowRight, ChevronDown
 } from 'lucide-react';
 
 const MERCHANT_NAV = [
@@ -65,13 +66,7 @@ export const MerchantLayout: React.FC = () => {
         {/* Right: PayPal Status & Actions */}
         <div className="flex items-center space-x-3 sm:space-x-4">
           <Link to="/merchant/offer-studio" aria-label="AI Offer Studio" className="studio-pill studio-primary"><Sparkles size={16}/><span>AI Offer Studio</span></Link>
-          <Link to="/merchant/overview#activity" className="studio-bell" aria-label="Recent instructor activity" onClick={event => {
-            window.dispatchEvent(new Event('open-instructor-activity'));
-            if (location.pathname === '/merchant/overview') {
-              event.preventDefault();
-              window.setTimeout(() => document.getElementById('activity')?.scrollIntoView({ behavior: 'smooth' }), 0);
-            }
-          }}><Bell size={19}/></Link>
+          {user && <InstructorNotifications key={user.id} />}
           <details key={location.pathname} className="studio-profile">
             <summary><i/><span>{user?.full_name || 'Dr. Elena Park'}</span><ChevronDown size={14}/></summary>
             <div><Link to="/merchant/settings">Settings</Link><Link to="/app/overview">Switch to Learner View</Link><button onClick={() => { logout(); navigate('/'); }}><LogOut size={14}/>Sign Out</button></div>

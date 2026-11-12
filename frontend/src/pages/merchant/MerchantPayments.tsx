@@ -43,6 +43,12 @@ export function MerchantPayments(){
   const totals = new Map<string, number>();
   const captured = orders.filter(order => order.status === 'Captured');
   const refunds = orders.filter(order => order.status === 'Refunded').length;
+  const successful = orders.filter(order => order.capture !== '—').length;
+  const failed = orders.filter(order => order.status === 'Failed').length;
+  const completed = successful + failed;
+  const successRate = completed
+    ? new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 1 }).format(successful / completed)
+    : '—';
   for (const order of captured) totals.set(order.currency, (totals.get(order.currency) ?? 0) + order.amount);
   const gross = [...totals].map(([currency, amount]) => money(amount, currency)).join(' / ');
   const [tab,setTab]=useState(0);
@@ -66,7 +72,7 @@ export function MerchantPayments(){
   }
   function close(){setModal('');setDetail(null)}
   return <div className="studio-overview pay-page"><header className="studio-hero"><h1>PayPal Transactions <img src={logo} alt=""/></h1><p>Track and manage workshop payments, captures, refunds, and payouts processed through PayPal, including your Sandbox integration.</p></header>
-  {loadState&&<p role="status">{loadState}</p>}<div className="studio-kpis">{['Gross Volume','Captured Orders','Refunds','Success Rate'].map((title,i)=>{const Icon=[Layers,ShoppingCart,Undo2,ShieldCheck][i];return <section key={title}><span><Icon/>{title}</span><div><strong>{[loadState?'—':gross||money(0),loadState?'—':captured.length,loadState?'—':refunds,'—'][i]}</strong>{i<2&&<button aria-label={'View '+title} onClick={()=>{setTab(i);setPage(0)}}><ChevronRight/></button>}</div></section>})}</div>
+  {loadState&&<p role="status">{loadState}</p>}<div className="studio-kpis">{['Gross Volume','Captured Orders','Refunds','Success Rate'].map((title,i)=>{const Icon=[Layers,ShoppingCart,Undo2,ShieldCheck][i];return <section key={title} title={i===3 ? "Captured payments divided by captured and failed payments. Pending orders are excluded." : undefined}><span><Icon/>{title}</span><div><strong>{[loadState?'—':gross||money(0),loadState?'—':captured.length,loadState?'—':refunds,loadState?'—':successRate][i]}</strong>{i<2&&<button aria-label={'View '+title} onClick={()=>{setTab(i);setPage(0)}}><ChevronRight/></button>}</div></section>})}</div>
   <div className="pay-grid"><section className="pay-card pay-ledger"><header><CreditCard/><div><h2>Transaction Ledger</h2><p>All PayPal orders for your workshops, with payment status and capture details.</p></div><button className="pay-action" onClick={exportCsv}><Download/>Export CSV</button></header>
   <nav>{tabs.map((label,i)=>{const Icon=statusIcons[i];return <button key={label} aria-pressed={tab===i} onClick={()=>{setTab(i);setPage(0)}}><Icon/>{label} ({i?orders.filter(o=>o.status===label).length:orders.length})</button>})}</nav>
   <div className="pay-search"><label><Search/><input aria-label="Search transactions" placeholder="Search by Order ID, buyer, workshop, or Capture ID..." value={query} onChange={e=>{setQuery(e.target.value);setPage(0)}}/></label><label><Calendar/><select aria-label="Date range" value={days} onChange={e=>{setDays(Number(e.target.value));setPage(0)}}><option value={0}>Date: All time</option>{[7,30,90].map(d=><option key={d} value={d}>Date: Last {d} Days</option>)}</select></label><select aria-label="Workshop" value={workshop} onChange={e=>{setWorkshop(e.target.value);setPage(0)}}><option value="">Workshop: All</option>{workshops.map(w=><option key={w}>{w}</option>)}</select><select aria-label="Amount" value={amount} onChange={e=>{setAmount(e.target.value);setPage(0)}}><option value="">Amount: Any</option><option>Under $15 USD</option><option>$15 USD or more</option></select></div>

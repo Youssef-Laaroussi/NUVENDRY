@@ -11,9 +11,9 @@ def terms(text: str) -> set[str]:
 
 
 async def advise(question, previous, workshops, interests, *, ground_catalog=False):
-    stop_words = set("je tu les des une pour avec veux quel quels quelle comment cherche apprendre atelier ateliers the for with and can you workshop workshops want learn about what which lesson lessons course courses class classes available existing find show recommend me please cours leçon leçons formation formations trouve propose moi sur existing catalog current introductory intro beginner intermediate advanced hands practical online live".split())
+    stop_words = set("je tu les des une pour avec veux quel quels quelle comment cherche apprendre atelier ateliers the for with and can you will would to workshop workshops want learn about what which lesson lessons course courses class classes available existing find show recommend me please cours leçon leçons formation formations trouve propose moi sur existing catalog current introductory intro beginner intermediate advanced hands practical online live".split())
     query = terms(question) - stop_words
-    if previous and (len(query) <= 1 or query & {"autre", "autres", "another", "alternatives"}):
+    if previous and (not query or query & {"autre", "autres", "another", "alternatives"}):
         query |= terms(previous[-1].question) - stop_words
     preferred = terms(" ".join(interests))
     catalog_words = {"lesson", "lessons", "course", "courses", "workshop", "workshops", "cours", "atelier", "ateliers", "formation", "formations", "leçon", "leçons"}
@@ -25,17 +25,17 @@ async def advise(question, previous, workshops, interests, *, ground_catalog=Fal
         if score or generic_catalog:
             matches.append((score + len(preferred & title), workshop))
     matches.sort(key=lambda match: match[0], reverse=True)
-    sources = [{"id": workshop.id, "title": workshop.title} for _, workshop in matches[:3]]
+    sources = [{"id": workshop.id, "title": workshop.title} for _, workshop in matches]
     french = bool(terms(question) & {"je", "cherche", "pour", "bonjour", "apprendre", "quel", "quels", "avec", "veux", "comment", "atelier", "ateliers"})
     fallback = (
-        "Voici les ateliers disponibles qui correspondent aux termes de ta recherche. Ouvre une fiche pour consulter le programme."
-        if french else "These available workshops match terms in your question. Open a workshop to review its syllabus."
+        "Voici les ateliers publiés qui correspondent aux termes de ta recherche. Ouvre une fiche pour consulter le programme."
+        if french else "These published workshops match terms in your question. Open a workshop to review its syllabus."
     ) if sources else (
         "Je n’ai pas trouvé d’atelier disponible correspondant. Précise la compétence que tu veux apprendre ou soumets une demande dans My Demands."
-        if french else "I found no matching available workshop. Tell me which skill you want to learn or submit a request in My Demands."
+        if french else "I found no matching published workshop. Tell me which skill you want to learn or submit a request in My Demands."
     )
     if sources and generic_catalog:
-        fallback = "Voici les prochains ateliers disponibles dans le catalogue." if french else "Here are upcoming workshops available in the catalog."
+        fallback = "Voici les ateliers publiés dans le catalogue." if french else "Here are published workshops in the catalog."
     deepseek_key = settings.DEEPSEEK_API_KEY.get_secret_value().strip()
     if (ground_catalog and sources) or terms(question) & catalog_words or (not deepseek_key and not settings.OLLAMA_MODEL):
         return fallback, sources, "catalog"

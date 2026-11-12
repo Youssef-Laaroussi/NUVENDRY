@@ -157,6 +157,25 @@ async def test_catalog_request_returns_only_matching_workshops(monkeypatch):
     assert sources == [{"id": "agents", "title": "Building LangGraph Agents"}]
 
 
+
+async def test_advisor_returns_every_matching_python_workshop():
+    from types import SimpleNamespace
+    from app.ai.advisor import advise
+
+    workshops = [
+        SimpleNamespace(id=str(i), title=f"Python Workshop {i}", category="Programming", description="")
+        for i in range(4)
+    ]
+    workshops.extend([
+        SimpleNamespace(id="description", title="Data Analysis", category="Data", description="Learn Python."),
+        SimpleNamespace(id="unrelated", title="Java Workshop", category="Programming", description=""),
+    ])
+    previous = [SimpleNamespace(question="I want to learn Java")]
+    _, sources, mode = await advise("I will to learn Python", previous, workshops, [], ground_catalog=True)
+    assert mode == "catalog"
+    assert [source["id"] for source in sources] == ["0", "1", "2", "3", "description"]
+
+
 def test_recommendations_require_topic_evidence_and_compatible_budget():
     from datetime import datetime, timezone
     from app.ai.recommender import recommender
