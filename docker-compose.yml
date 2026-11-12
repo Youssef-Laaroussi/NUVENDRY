@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: nuvendry
-      POSTGRES_PASSWORD: nuvendry_secret_password_2026
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: nuvendry
     ports:
       - "127.0.0.1:55432:5432"
@@ -29,8 +29,8 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql+asyncpg://nuvendry:nuvendry_secret_password_2026@postgres:5432/nuvendry
-      - SECRET_KEY=nuvendry_production_grade_secret_key_change_in_prod_2026
+      - DATABASE_URL=postgresql+asyncpg://nuvendry:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/nuvendry
+      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env}
       - PAYPAL_ENV=sandbox
       - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID:-}
       - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET:-}
@@ -39,9 +39,8 @@ services:
       - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-flash}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - DEMO_MODE=true
-    command: >
-      sh -c "python seed_demo.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+      - DEMO_MODE=${DEMO_MODE:-false}
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "8000:8000"
 

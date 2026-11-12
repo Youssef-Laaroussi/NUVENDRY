@@ -9,12 +9,12 @@ export const TermsPage: React.FC = () => {
         
         <div className="space-y-4 text-xs sm:text-sm text-charcoal/80 leading-relaxed bg-white p-8 rounded-2xl border border-warmgray">
           <div className="p-4 rounded-xl bg-mint/50 border border-forest/30 font-medium text-forest text-xs">
-            Hackathon Notice: NUVENDRY is an independent software application created for the PayPal AI Hackathon 2026. PayPal integration uses the Sandbox environment with simulated currency.
+            Payments are processed in PayPal Sandbox using simulated funds.
           </div>
 
-          <h2 className="text-base font-semibold text-charcoal">1. Prototype Operations</h2>
+          <h2 className="text-base font-semibold text-charcoal">1. Sandbox Payments</h2>
           <p>
-            The software is provided for demonstration, testing, and competitive evaluation purposes. All transactions reflect test orders verified via PayPal Orders v2 APIs.
+            NUVENDRY verifies test orders through the PayPal Orders v2 API.
           </p>
 
           <h2 className="text-base font-semibold text-charcoal">2. Merchant-Funded Rewards</h2>

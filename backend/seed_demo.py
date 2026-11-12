@@ -1,4 +1,6 @@
 import asyncio
+import os
+import secrets
 import uuid
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
@@ -27,7 +29,7 @@ async def seed():
         admin = User(
             id=admin_id,
             email="admin@nuvendry.com",
-            hashed_password=get_password_hash("Admin2026!"),
+            hashed_password=get_password_hash(os.getenv("DEMO_ADMIN_PASSWORD") or secrets.token_urlsafe(32)),
             full_name="Platform Administrator",
             role="admin",
             referral_code="NV-ADMIN"
@@ -40,7 +42,7 @@ async def seed():
         instructor = User(
             id=instructor_id,
             email="elena.ai@nuvendry.com",
-            hashed_password=get_password_hash("Instructor2026!"),
+            hashed_password=get_password_hash(os.getenv("DEMO_INSTRUCTOR_PASSWORD") or secrets.token_urlsafe(32)),
             full_name="Dr. Elena Rostova",
             role="instructor",
             referral_code="NV-ELENA"
@@ -64,7 +66,7 @@ async def seed():
         learner1 = User(
             id=learner1_id,
             email="learner.sophia@example.com",
-            hashed_password=get_password_hash("Learner2026!"),
+            hashed_password=get_password_hash(os.getenv("DEMO_LEARNER_PASSWORD") or secrets.token_urlsafe(32)),
             full_name="Sophia Chen",
             role="learner",
             referral_code="NV-SOPHIA"
@@ -77,7 +79,7 @@ async def seed():
         learner2 = User(
             id=learner2_id,
             email="learner.marcus@example.com",
-            hashed_password=get_password_hash("Learner2026!"),
+            hashed_password=get_password_hash(os.getenv("DEMO_LEARNER_PASSWORD") or secrets.token_urlsafe(32)),
             full_name="Marcus Vance",
             role="learner",
             referral_code="NV-MARCUS"
